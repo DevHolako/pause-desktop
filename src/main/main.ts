@@ -10,6 +10,7 @@ import { Store } from './store';
 import { PinLock } from './pin';
 import { createHistory, HistoryManager } from './history';
 import { AppUpdater } from './updater';
+import { generateXlsx, generateCsv } from './exporter';
 import { StoreChanges } from './types';
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -504,6 +505,14 @@ function registerIpc(): void {
 
     ipcMain.handle('history:listDays', (_e, opts) => history.listDays(opts || {}));
     ipcMain.handle('history:exportFile', () => history.exportFile());
+    ipcMain.handle('history:exportXlsx', async (_e, opts) => {
+        const days = await history.listDays(opts || {});
+        return generateXlsx(days);
+    });
+    ipcMain.handle('history:exportCsv', async (_e, opts) => {
+        const days = await history.listDays(opts || {});
+        return generateCsv(days);
+    });
 }
 
 function handleMessage(msg: any): Promise<any> {

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "electron-updater": "^6.8.9",
+    "exceljs": "^4.4.0",
     "sql.js": "^1.14.2"
   },
   "devDependencies": {

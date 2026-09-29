@@ -124,6 +124,7 @@ Dans `%APPDATA%\Pause & Salat\` :
 │   │   ├── store.ts       # Stockage clé/valeur persistant atomique
 │   │   ├── pin.ts         # Vérification PBKDF2 et temporisation du code PIN
 │   │   ├── history.ts     # Base SQLite (sql.js) pour l'historique des journées
+│   │   ├── exporter.ts    # Génération des exports Excel (.xlsx) et CSV (.csv)
 │   │   ├── preload.ts     # Pont IPC exposant chrome, psPin, psHistory, psSystem, psUpdater
 │   │   ├── shared.ts      # Injection des règles partagées dans l'environnement global
 │   │   └── types.ts       # Définitions d'interfaces et types TypeScript

@@ -94,6 +94,8 @@ const psPin = {
 const psHistory = {
     listDays: (opts?: any) => ipcRenderer.invoke('history:listDays', opts),
     exportFile: () => ipcRenderer.invoke('history:exportFile'),
+    exportXlsx: (opts?: any) => ipcRenderer.invoke('history:exportXlsx', opts),
+    exportCsv: (opts?: any) => ipcRenderer.invoke('history:exportCsv', opts),
     deleteDay: (date: string) => ipcRenderer.invoke('runtime:message', { type: 'history:deleteDay', date }),
     onChange: (cb: () => void) => {
         const handler = () => cb();

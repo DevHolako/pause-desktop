@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="history.css">
+    <link rel="stylesheet" href="updater.css">
 </head>
 <body>
     <header class="masthead">
@@ -31,12 +32,19 @@
                     <button type="button" role="radio" data-range="30" aria-checked="true">30 jours</button>
                     <button type="button" role="radio" data-range="all" aria-checked="false">Tout</button>
                 </div>
-                <button type="button" id="exportBtn" class="btn-ghost">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>
-                    </svg>
-                    Exporter la base SQLite
-                </button>
+                <div class="export-group" role="group" aria-label="Exportation des données">
+                    <select id="exportFormat" class="export-select" aria-label="Format d'exportation">
+                        <option value="xlsx" selected>Excel (.xlsx)</option>
+                        <option value="csv">CSV (.csv)</option>
+                        <option value="sqlite">Base SQLite (.sqlite)</option>
+                    </select>
+                    <button type="button" id="exportBtn" class="btn-ghost export-btn" title="Exporter l'historique">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>
+                        </svg>
+                        <span id="exportBtnLabel">Exporter</span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>

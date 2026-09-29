@@ -13,6 +13,9 @@ const summaryEl = document.getElementById('summary');
 const statusEl = document.getElementById('status');
 const axisEl = document.getElementById('axis');
 const exportBtn = document.getElementById('exportBtn');
+const exportFormatSelect = document.getElementById('exportFormat');
+const exportBtnLabel = document.getElementById('exportBtnLabel');
+const EXPORT_FORMAT_KEY = 'historyExportFormat';
 const rangeButtons = [...document.querySelectorAll('.segmented button')];
 
 const dayNameFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', timeZone: 'UTC' });
@@ -257,21 +260,49 @@ async function deleteDay(date) {
     load();
 }
 
-async function exportDb() {
+async function exportHistory() {
     exportBtn.disabled = true;
+    const format = exportFormatSelect ? exportFormatSelect.value : 'xlsx';
+    const oldLabel = exportBtnLabel ? exportBtnLabel.textContent : 'Exporter';
+    if (exportBtnLabel) exportBtnLabel.textContent = 'Exportation...';
+
     try {
-        const bytes = await HistoryDb.exportFile();
-        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.sqlite3' }));
+        const dateKey = moroccoDateKey();
+        let blob, filename;
+
+        if (format === 'xlsx') {
+            const buffer = await HistoryDb.exportXlsx();
+            blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            filename = `pause-historique-${dateKey}.xlsx`;
+        } else if (format === 'csv') {
+            const csvText = await HistoryDb.exportCsv();
+            blob = new Blob([csvText], {
+                type: 'text/csv;charset=utf-8;'
+            });
+            filename = `pause-historique-${dateKey}.csv`;
+        } else {
+            // sqlite
+            const bytes = await HistoryDb.exportFile();
+            blob = new Blob([bytes], {
+                type: 'application/vnd.sqlite3'
+            });
+            filename = `pause-historique-${dateKey}.sqlite`;
+        }
+
+        const url = URL.createObjectURL(blob);
         const a = el('a');
         a.href = url;
-        a.download = `pause-salat-historique-${moroccoDateKey()}.sqlite`;
+        a.download = filename;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err) {
-        console.error('[Pause & Salat] Export impossible :', err);
-        showStatus("L'export a échoué. Réessayez dans un instant.", true);
+        console.error('[Pause] Export impossible :', err);
+        showStatus("L'exportation a échoué. Réessayez dans un instant.", true);
     } finally {
         exportBtn.disabled = false;
+        if (exportBtnLabel) exportBtnLabel.textContent = oldLabel;
     }
 }
 
@@ -295,7 +326,20 @@ document.querySelector('.segmented').addEventListener('keydown', (e) => {
     setRange(next.dataset.range);
 });
 
-exportBtn.addEventListener('click', exportDb);
+if (exportFormatSelect) {
+    let savedFormat = 'xlsx';
+    try {
+        savedFormat = localStorage.getItem(EXPORT_FORMAT_KEY) || 'xlsx';
+    } catch (_) {}
+    exportFormatSelect.value = savedFormat;
+    exportFormatSelect.addEventListener('change', () => {
+        try {
+            localStorage.setItem(EXPORT_FORMAT_KEY, exportFormatSelect.value);
+        } catch (_) {}
+    });
+}
+
+exportBtn.addEventListener('click', exportHistory);
 
 // Rafraîchit quand le popup enregistre la journée
 HistoryDb.onChange(load);
