@@ -8,9 +8,9 @@ import * as https from 'https';
 import { Store } from './store';
 import { GitHubRelease, ProgressInfo, UpdateInfo, UpdaterStatus, UpdaterState } from './types';
 
-// Dépôt GitHub par défaut (configurable via package.json ou variables d'environnement)
-const GITHUB_OWNER = process.env.GH_REPO_OWNER || 'weshore';
-const GITHUB_REPO = process.env.GH_REPO_NAME || 'pause-salat-desktop';
+// Dépôt GitHub par défaut (configurable via variables d'environnement)
+const GITHUB_OWNER = process.env.GH_REPO_OWNER || 'DevHolako';
+const GITHUB_REPO = process.env.GH_REPO_NAME || 'pause-desktop';
 
 // Période de vérification périodique en arrière-plan (45 minutes)
 const BACKGROUND_CHECK_INTERVAL_MS = 45 * 60 * 1000;

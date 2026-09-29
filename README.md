@@ -57,20 +57,18 @@ L'application intègre un module d'auto-mise à jour intelligent :
 
 ### 1. Lier le dépôt local à votre GitHub
 
-Si vous venez d'initialiser ce dépôt, créez un nouveau dépôt sur GitHub (ex: `weshore/pause-salat-desktop`), puis liez-le en ligne de commande :
+Pour lier ce dépôt local au dépôt GitHub [DevHolako/pause-desktop](https://github.com/DevHolako/pause-desktop) :
 
 ```bash
 # Ajouter le remote GitHub
-git remote add origin https://github.com/weshore/pause-salat-desktop.git
+git remote add origin https://github.com/DevHolako/pause-desktop.git
 
-# Renommer la branche principale en main si nécessaire
+# Définir la branche principale
 git branch -M main
 
-# Pousser le code initial
+# Pousser le code vers GitHub
 git push -u origin main
 ```
-
-*(Si votre dépôt est sous un autre nom d'utilisateur ou d'organisation, ajustez le champ `publish` et `repository` dans [package.json](file:///d:/desktop/package.json) ainsi que la variable `GITHUB_OWNER` dans [updater.ts](file:///d:/desktop/src/main/updater.ts)).*
 
 ### 2. Publier une nouvelle version automatiquement
 

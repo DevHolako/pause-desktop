@@ -8,7 +8,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/weshore/pause-salat-desktop.git"
+    "url": "https://github.com/DevHolako/pause-desktop.git"
   },
   "scripts": {
     "build": "tsc",
@@ -33,8 +33,8 @@
     "productName": "Pause & Salat",
     "publish": {
       "provider": "github",
-      "owner": "weshore",
-      "repo": "pause-salat-desktop"
+      "owner": "DevHolako",
+      "repo": "pause-desktop"
     },
     "directories": {
       "output": "release"
