@@ -4,7 +4,10 @@
 
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
+import * as fs from 'fs';
 import * as https from 'https';
+import * as path from 'path';
+import { spawn } from 'child_process';
 import { Store } from './store';
 import { GitHubRelease, ProgressInfo, UpdateInfo, UpdaterStatus, UpdaterState } from './types';
 
@@ -12,10 +15,10 @@ import { GitHubRelease, ProgressInfo, UpdateInfo, UpdaterStatus, UpdaterState } 
 const GITHUB_OWNER = process.env.GH_REPO_OWNER || 'DevHolako';
 const GITHUB_REPO = process.env.GH_REPO_NAME || 'pause-desktop';
 
-// Période de vérification périodique en arrière-plan (45 minutes)
-const BACKGROUND_CHECK_INTERVAL_MS = 45 * 60 * 1000;
-// Délai avant la première vérification au démarrage (6 secondes, non-bloquant)
-const STARTUP_CHECK_DELAY_MS = 6 * 1000;
+// Période de vérification périodique en arrière-plan (15 minutes)
+const BACKGROUND_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+// Délai avant la première vérification au démarrage (4 secondes, non-bloquant)
+const STARTUP_CHECK_DELAY_MS = 4 * 1000;
 
 /** Compare deux versions semver ('1.0.1' vs '1.0.0'). Renvoie 1 si v1 > v2, -1 si v1 < v2, 0 si égal */
 export function semverCompare(v1: string, v2: string): number {
@@ -39,6 +42,7 @@ export class AppUpdater {
     private periodicTimer: NodeJS.Timeout | null = null;
     private startupTimer: NodeJS.Timeout | null = null;
     private isDownloading: boolean = false;
+    private downloadedFilePath: string | null = null;
 
     constructor(store: Store) {
         this.store = store;
@@ -68,12 +72,16 @@ export class AppUpdater {
                 ? info.releaseNotes
                 : '';
 
+            const fallbackFileName = `Pause-Setup-${info.version}.exe`;
+            const fileName = info.files?.[0]?.url || fallbackFileName;
             const updateInfo: UpdateInfo = {
                 version: info.version,
                 releaseName: (info as any).releaseName || `Version ${info.version}`,
                 releaseDate: info.releaseDate,
                 releaseNotes,
-                fileName: info.files?.[0]?.url
+                fileName,
+                htmlUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tag/v${info.version}`,
+                downloadUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/v${info.version}/${fileName}`
             };
 
             this.updateStatus({
@@ -112,9 +120,10 @@ export class AppUpdater {
         });
 
         autoUpdater.on('error', (err) => {
+            const wasDownloading = this.isDownloading;
             this.isDownloading = false;
-            console.error('[Pause & Salat Updater] Erreur electron-updater :', err);
-            const message = this.humanizeError(err);
+            console.error('[Pause Updater] Erreur electron-updater :', err);
+            const message = this.humanizeError(err, wasDownloading ? 'download' : 'check');
             this.updateStatus({
                 state: message.state,
                 error: message.text
@@ -148,6 +157,16 @@ export class AppUpdater {
         if (this.periodicTimer) {
             clearInterval(this.periodicTimer);
             this.periodicTimer = null;
+        }
+    }
+
+    /** Vérifie s'il est temps de faire une vérification (ex. réactivation ou ouverture de fenêtre) */
+    public checkIfDue(): void {
+        const lastCheck = typeof this.status.lastCheck === 'number' ? this.status.lastCheck : 0;
+        if (Date.now() - lastCheck > 10 * 60 * 1000 && this.status.state !== 'checking' && this.status.state !== 'downloading') {
+            this.checkForUpdates(true).catch((err) => {
+                console.warn('[Pause Updater] Vérification à la réactivation silencieuse échouée :', err?.message || err);
+            });
         }
     }
 
@@ -259,12 +278,24 @@ export class AppUpdater {
 
         if (app.isPackaged) {
             try {
-                this.updateStatus({ state: 'downloading' });
+                this.updateStatus({ state: 'downloading', error: undefined });
                 await autoUpdater.downloadUpdate();
                 return { ok: true };
             } catch (err: any) {
+                console.warn('[Pause Updater] autoUpdater.downloadUpdate() a échoué, tentative directe via GitHub Releases...', err?.message);
+
+                // Repli direct : téléchargement du binaire depuis GitHub Releases
+                try {
+                    const fallbackSuccess = await this.fallbackDirectDownload();
+                    if (fallbackSuccess) {
+                        return { ok: true };
+                    }
+                } catch (fallbackErr: any) {
+                    console.error('[Pause Updater] Échec du téléchargement direct repli :', fallbackErr?.message || fallbackErr);
+                }
+
                 this.isDownloading = false;
-                const parsed = this.humanizeError(err);
+                const parsed = this.humanizeError(err, 'download');
                 this.updateStatus({ state: 'error', error: parsed.text });
                 return { ok: false, error: parsed.text };
             }
@@ -273,6 +304,113 @@ export class AppUpdater {
         // En mode développement : simulation de téléchargement fluide pour tester l'UI
         this.simulateDownloadInDev();
         return { ok: true };
+    }
+
+    /** Téléchargement de secours direct de l'exécutable d'installation depuis GitHub Releases */
+    private async fallbackDirectDownload(): Promise<boolean> {
+        let downloadUrl = this.status.updateInfo?.downloadUrl;
+        let fileName = this.status.updateInfo?.fileName || `Pause-Setup-${this.status.latestVersion || 'latest'}.exe`;
+
+        if (!downloadUrl) {
+            const release = await this.fetchLatestGitHubRelease(GITHUB_OWNER, GITHUB_REPO);
+            const exeAsset = release?.assets?.find((a) => a.name.endsWith('.exe'));
+            if (exeAsset) {
+                downloadUrl = exeAsset.browser_download_url;
+                fileName = exeAsset.name;
+            }
+        }
+
+        if (!downloadUrl) {
+            return false;
+        }
+
+        const tempDir = app.getPath('temp');
+        const targetPath = path.join(tempDir, fileName);
+
+        await this.downloadFileWithProgress(downloadUrl, targetPath, (transferred, total, bytesPerSecond) => {
+            const percent = total > 0 ? Math.round((transferred / total) * 1000) / 10 : 0;
+            this.updateStatus({
+                state: 'downloading',
+                progress: {
+                    percent,
+                    bytesPerSecond,
+                    transferred,
+                    total
+                }
+            });
+        });
+
+        this.downloadedFilePath = targetPath;
+        this.isDownloading = false;
+        this.updateStatus({
+            state: 'downloaded',
+            latestVersion: this.status.latestVersion
+        });
+        return true;
+    }
+
+    /** Télécharge un fichier HTTPS en suivant les redirections et en mesurant la vitesse */
+    private downloadFileWithProgress(
+        url: string,
+        destPath: string,
+        onProgress: (transferred: number, total: number, bytesPerSecond: number) => void
+    ): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const fileStream = fs.createWriteStream(destPath);
+            const startTimestamp = Date.now();
+            let lastReport = Date.now();
+            let transferred = 0;
+
+            const doRequest = (currentUrl: string, redirectCount = 0) => {
+                if (redirectCount > 6) {
+                    fileStream.close();
+                    return reject(new Error('Trop de redirections'));
+                }
+
+                const req = https.get(currentUrl, {
+                    headers: { 'User-Agent': 'Pause-Desktop-App' }
+                }, (res) => {
+                    if (res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+                        return doRequest(res.headers.location, redirectCount + 1);
+                    }
+
+                    if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+                        fileStream.close();
+                        return reject(new Error(`HTTP ${res.statusCode}`));
+                    }
+
+                    const total = parseInt(res.headers['content-length'] || '0', 10);
+
+                    res.on('data', (chunk) => {
+                        transferred += chunk.length;
+                        const now = Date.now();
+                        if (now - lastReport >= 200 || (total > 0 && transferred === total)) {
+                            const elapsedSecs = Math.max(0.1, (now - startTimestamp) / 1000);
+                            const speed = Math.round(transferred / elapsedSecs);
+                            onProgress(transferred, total, speed);
+                            lastReport = now;
+                        }
+                    });
+
+                    res.pipe(fileStream);
+
+                    fileStream.on('finish', () => {
+                        fileStream.close(() => resolve());
+                    });
+                });
+
+                req.on('error', (err) => {
+                    fileStream.close();
+                    reject(err);
+                });
+
+                req.setTimeout(60000, () => {
+                    req.destroy(new Error('Délai d’attente dépassé'));
+                });
+            };
+
+            doRequest(url);
+        });
     }
 
     /** Simulation de téléchargement fluide en dev pour tester l'UI */
@@ -307,6 +445,20 @@ export class AppUpdater {
 
     /** Quitte et installe la mise à jour */
     public installUpdate(): void {
+        if (this.downloadedFilePath && fs.existsSync(this.downloadedFilePath)) {
+            try {
+                const child = spawn(this.downloadedFilePath, [], {
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                child.unref();
+                app.quit();
+                return;
+            } catch (err) {
+                console.error('[Pause Updater] Échec du lancement de l’installeur repli :', err);
+            }
+        }
+
         if (app.isPackaged) {
             autoUpdater.quitAndInstall(false, true);
         } else {
@@ -371,7 +523,7 @@ export class AppUpdater {
     }
 
     /** Convertit les erreurs techniques en messages clairs et compréhensibles */
-    private humanizeError(err: any): { state: UpdaterState; text: string } {
+    private humanizeError(err: any, context: 'check' | 'download' = 'check'): { state: UpdaterState; text: string } {
         const msg = String(err?.message || err || '').toLowerCase();
         if (msg.includes('enotfound') || msg.includes('offline') || msg.includes('net::err_internet_disconnected') || msg.includes('timeout')) {
             return {
@@ -386,6 +538,12 @@ export class AppUpdater {
             };
         }
         if (msg.includes('404')) {
+            if (context === 'download') {
+                return {
+                    state: 'error',
+                    text: 'Le fichier d’installation est momentanément indisponible sur GitHub Releases.'
+                };
+            }
             return {
                 state: 'not-available',
                 text: 'Aucune version publiée trouvée sur GitHub Releases pour le moment.'
@@ -393,7 +551,9 @@ export class AppUpdater {
         }
         return {
             state: 'error',
-            text: `Échec de la recherche de mise à jour (${err?.message || 'Erreur réseau'}).`
+            text: context === 'download'
+                ? `Échec du téléchargement (${err?.message || 'Erreur réseau'}).`
+                : `Échec de la recherche de mise à jour (${err?.message || 'Erreur réseau'}).`
         };
     }
 

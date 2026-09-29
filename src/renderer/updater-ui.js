@@ -91,6 +91,18 @@
             .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     }
 
+    /** Met à jour le texte et l'état désactivé du bouton principal en préservant son innerHTML */
+    function setActionButtonState(btn, text, disabled) {
+        if (!btn) return;
+        btn.disabled = Boolean(disabled);
+        const span = btn.querySelector('#updateActionBtnText');
+        if (span) {
+            span.textContent = text;
+        } else {
+            btn.innerHTML = `<span id="updateActionBtnText">${escapeHtml(text)}</span>`;
+        }
+    }
+
     // ------------------------------------------------------------- Dialogue Modal
 
     let activeDialog = null;
@@ -152,7 +164,10 @@
 
                 <!-- Message d'erreur -->
                 <div id="updateErrorSection" class="update-error-box" style="display: none;">
-                    <span id="updateErrorText"></span>
+                    <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                        <span id="updateErrorText"></span>
+                        <a href="#" id="updateFallbackLink" style="color: inherit; text-decoration: underline; font-weight: 600; cursor: pointer; font-size: 11px; display: inline-block;">Télécharger manuellement depuis GitHub &rarr;</a>
+                    </div>
                 </div>
 
                 <!-- Boutons d'action -->
@@ -171,6 +186,15 @@
 
         const laterBtn = dialog.querySelector('#updateLaterBtn');
         const actionBtn = dialog.querySelector('#updateActionBtn');
+        const fallbackLink = dialog.querySelector('#updateFallbackLink');
+
+        if (fallbackLink) {
+            fallbackLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = currentStatus?.updateInfo?.downloadUrl || currentStatus?.updateInfo?.htmlUrl;
+                window.psUpdater.openReleaseUrl(url);
+            });
+        }
 
         laterBtn.addEventListener('click', () => {
             if (currentStatus?.latestVersion) {
@@ -183,12 +207,10 @@
             if (!currentStatus) return;
 
             if (currentStatus.state === 'downloaded') {
-                actionBtn.disabled = true;
-                actionBtn.textContent = 'Installation...';
+                setActionButtonState(actionBtn, 'Installation...', true);
                 await window.psUpdater.install();
             } else if (currentStatus.state === 'available' || currentStatus.state === 'error') {
-                actionBtn.disabled = true;
-                actionBtn.textContent = 'Démarrage...';
+                setActionButtonState(actionBtn, 'Démarrage...', true);
                 await window.psUpdater.download();
             }
         });
@@ -274,15 +296,13 @@
         const readySection = dialog.querySelector('#updateReadySection');
         const errorSection = dialog.querySelector('#updateErrorSection');
         const actionBtn = dialog.querySelector('#updateActionBtn');
-        const actionBtnText = dialog.querySelector('#updateActionBtnText');
 
         if (status.state === 'downloading') {
             notesSection.style.display = 'none';
             readySection.style.display = 'none';
             errorSection.style.display = 'none';
             progressSection.style.display = 'flex';
-            actionBtn.disabled = true;
-            actionBtnText.textContent = 'Téléchargement...';
+            setActionButtonState(actionBtn, 'Téléchargement...', true);
 
             if (status.progress) {
                 const percent = Math.min(100, Math.max(0, status.progress.percent || 0));
@@ -296,23 +316,20 @@
             progressSection.style.display = 'none';
             errorSection.style.display = 'none';
             readySection.style.display = 'flex';
-            actionBtn.disabled = false;
-            actionBtnText.textContent = 'Redémarrer & installer';
+            setActionButtonState(actionBtn, 'Redémarrer & installer', false);
         } else if (status.state === 'error') {
             notesSection.style.display = 'block';
             progressSection.style.display = 'none';
             readySection.style.display = 'none';
             errorSection.style.display = 'flex';
             dialog.querySelector('#updateErrorText').textContent = status.error || 'Erreur lors du téléchargement.';
-            actionBtn.disabled = false;
-            actionBtnText.textContent = 'Réessayer';
+            setActionButtonState(actionBtn, 'Réessayer', false);
         } else {
             notesSection.style.display = 'block';
             progressSection.style.display = 'none';
             readySection.style.display = 'none';
             errorSection.style.display = 'none';
-            actionBtn.disabled = false;
-            actionBtnText.textContent = 'Télécharger & installer';
+            setActionButtonState(actionBtn, 'Télécharger & installer', false);
         }
 
         if (!dialog.open) {

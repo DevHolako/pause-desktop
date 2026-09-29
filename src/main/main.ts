@@ -124,6 +124,9 @@ function showMainWindow(): void {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
+    if (updater) {
+        updater.checkIfDue();
+    }
 }
 
 // ---------------------------------------------------------------- Zone de notification

@@ -1,7 +1,7 @@
 {
   "name": "pause-salat-desktop",
   "productName": "Pause",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Suivez votre journée de travail, vos pauses et les horaires de prière. Application de bureau Windows avec auto-updater GitHub Releases.",
   "main": "dist/main/main.js",
   "author": "Weshore",
@@ -50,14 +50,19 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "runAfterFinish": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Pause"
+      "shortcutName": "Pause",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
     }
   }
 }
