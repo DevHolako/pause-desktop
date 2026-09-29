@@ -1,11 +1,11 @@
 // Pont entre le processus principal et les fenêtres.
 // Expose un objet `chrome` minimal (storage.local, runtime, tabs) de même forme que l'API
 // de l'extension : les fichiers d'interface (popup.js, pause.js…) tournent sans modification.
-// En plus, `psHistory`, `psSystem` et `psUpdater` donnent accès
-// à l'historique SQLite, aux réglages système et à l'auto-updater GitHub Releases.
+// En plus, `psHistory`, `psSystem`, `psUpdater` et `psSync` donnent accès
+// à l'historique SQLite, aux réglages système, à l'auto-updater et à la synchronisation.
 
 import { ipcRenderer } from 'electron';
-import { UpdaterStatus } from './types';
+import { UpdaterStatus, SyncConfig, SyncResult, SyncStatus } from './types';
 
 const changeListeners = new Set<(changes: any, area: string) => void>();
 ipcRenderer.on('store-changed', (_e, changes) => {
@@ -117,6 +117,23 @@ const psUpdater = {
     }
 };
 
+// Synchronisation (Historique & Configuration)
+const psSync = {
+    getConfig: (): Promise<SyncConfig> => ipcRenderer.invoke('sync:getConfig'),
+    saveConfig: (config: Partial<SyncConfig>): Promise<SyncConfig> => ipcRenderer.invoke('sync:saveConfig', config),
+    syncNow: (): Promise<SyncResult> => ipcRenderer.invoke('sync:syncNow'),
+    chooseFolder: (): Promise<string | null> => ipcRenderer.invoke('sync:chooseFolder'),
+    openFolder: (folderPath?: string): Promise<string> => ipcRenderer.invoke('sync:openFolder', folderPath),
+    exportPackage: (): Promise<string> => ipcRenderer.invoke('sync:exportPackage'),
+    importPackage: (jsonStr: string): Promise<SyncResult> => ipcRenderer.invoke('sync:importPackage', jsonStr),
+    getStatus: (): Promise<SyncStatus> => ipcRenderer.invoke('sync:getStatus'),
+    onStatusChange: (cb: (status: SyncStatus) => void): (() => void) => {
+        const handler = (_e: any, status: SyncStatus) => cb(status);
+        ipcRenderer.on('sync:status', handler);
+        return () => ipcRenderer.removeListener('sync:status', handler);
+    }
+};
+
 // Remplace le window.chrome de Chromium par notre passerelle
 function define(name: string, value: any): void {
     try {
@@ -134,3 +151,5 @@ define('chrome', chromeShim);
 define('psHistory', psHistory);
 define('psSystem', psSystem);
 define('psUpdater', psUpdater);
+define('psSync', psSync);
+

@@ -57,6 +57,8 @@ export interface StoreValues {
     pauseStartTime?: number | null;
     isRamadanMode?: boolean;
     lastUpdateCheck?: number;
+    syncConfig?: SyncConfig;
+    syncConfigUpdatedAt?: number;
     [key: string]: any;
 }
 
@@ -126,3 +128,53 @@ export interface UpdaterStatus {
     lastCheck?: number;
     isManual?: boolean;
 }
+
+// ------------------------------------------------------------- Types Synchronisation
+
+export interface SyncConfig {
+    enabled: boolean;
+    folderPath?: string;
+    autoSync: boolean;
+    syncIntervalMins: number;
+    lastSyncTime?: number;
+    lastSyncStatus?: 'idle' | 'syncing' | 'success' | 'error';
+    lastSyncError?: string;
+    lastSyncMergedCount?: number;
+}
+
+export interface SyncPayload {
+    version: number;
+    appName: string;
+    exportDate: string;
+    deviceId: string;
+    updatedAt: number;
+    config: {
+        dayRulesConfig?: DayRulesConfig;
+        isRamadanMode?: boolean;
+        salatAlertLead?: number;
+        autoLaunch?: boolean;
+        updatedAt: number;
+    };
+    history: DayData[];
+}
+
+export interface SyncResult {
+    ok: boolean;
+    mergedDaysCount?: number;
+    configUpdated?: boolean;
+    error?: string;
+    syncedAt?: number;
+    folderPath?: string;
+}
+
+export interface SyncStatus {
+    isSyncing: boolean;
+    lastSyncTime?: number;
+    lastSyncStatus?: 'idle' | 'syncing' | 'success' | 'error';
+    lastSyncError?: string;
+    lastSyncMergedCount?: number;
+    detectedDrivePath?: string | null;
+    config: SyncConfig;
+}
+
+

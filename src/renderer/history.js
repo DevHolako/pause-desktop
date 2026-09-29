@@ -341,6 +341,45 @@ if (exportFormatSelect) {
 
 exportBtn.addEventListener('click', exportHistory);
 
+// Synchronisation rapide depuis l'historique
+const historySyncBtn = document.getElementById('historySyncBtn');
+const historySyncIcon = document.getElementById('historySyncIcon');
+const historySyncLabel = document.getElementById('historySyncLabel');
+
+if (window.psSync && historySyncBtn) {
+    historySyncBtn.style.display = 'inline-flex';
+
+    function updateHistorySyncStatus(status) {
+        if (!status) return;
+        if (historySyncIcon) historySyncIcon.classList.toggle('spinner-icon', Boolean(status.isSyncing));
+        if (historySyncBtn) historySyncBtn.disabled = Boolean(status.isSyncing);
+        if (historySyncLabel) historySyncLabel.textContent = status.isSyncing ? 'En cours...' : 'Synchroniser';
+    }
+
+    window.psSync.getStatus().then(updateHistorySyncStatus);
+    window.psSync.onStatusChange(updateHistorySyncStatus);
+
+    historySyncBtn.addEventListener('click', async () => {
+        historySyncBtn.disabled = true;
+        if (historySyncIcon) historySyncIcon.classList.add('spinner-icon');
+        if (historySyncLabel) historySyncLabel.textContent = 'En cours...';
+        try {
+            const res = await window.psSync.syncNow();
+            if (res.ok) {
+                await load();
+            } else {
+                alert(`Synchronisation : ${res.error || 'Échec de synchronisation'}`);
+            }
+        } catch (err) {
+            console.error('Erreur synchro historique :', err);
+        } finally {
+            historySyncBtn.disabled = false;
+            if (historySyncIcon) historySyncIcon.classList.remove('spinner-icon');
+            if (historySyncLabel) historySyncLabel.textContent = 'Synchroniser';
+        }
+    });
+}
+
 // Rafraîchit quand le popup enregistre la journée
 HistoryDb.onChange(load);
 
@@ -348,3 +387,4 @@ renderAxis();
 let savedRange = '30';
 try { savedRange = localStorage.getItem(RANGE_STORAGE_KEY) || '30'; } catch (_) { /* stockage indisponible */ }
 setRange(savedRange);
+

@@ -105,6 +105,78 @@
             </p>
         </section>
 
+        <!-- Synchronisation : visible dans l'application Windows (window.psSync) -->
+        <section id="syncSection" class="sync-card" hidden>
+            <div class="sync-header">
+                <div>
+                    <h2 class="sync-title">Synchronisation (Google Drive & Dossier local)</h2>
+                    <p class="rule-hint" style="margin: 4px 0 0;">
+                        Synchronisez vos temps de pause, vos journées et vos réglages entre vos différents ordinateurs via votre dossier Google Drive (ou tout dossier local / cloud).
+                    </p>
+                </div>
+                <div class="sync-status-row">
+                    <span id="syncStatusPill" class="update-status-pill update-status-pill--latest">Prêt</span>
+                    <button type="button" id="syncNowBtn" class="btn-primary" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; font-size: 13px;">
+                        <svg id="syncIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                        </svg>
+                        <span id="syncNowBtnText">Synchroniser maintenant</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Activation / AutoSync -->
+            <div class="sync-controls-row">
+                <label class="startup-toggle">
+                    <input type="checkbox" id="syncAutoToggle" class="switch-input" role="switch">
+                    <span class="switch" aria-hidden="true"></span>
+                    <span class="startup-toggle-label">Synchronisation automatique en arrière-plan</span>
+                </label>
+                <div id="syncMetaInfo" class="rule-hint" style="margin: 0; font-size: 12.5px;">
+                    Dernière synchronisation : <strong id="syncLastTimeLabel">Jamais</strong>
+                </div>
+            </div>
+
+            <!-- Dossier de synchronisation (Google Drive ou local) -->
+            <div class="sync-panel">
+                <label class="rule-field">
+                    <span class="rule-label">Dossier de synchronisation Google Drive ou local</span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="syncFolderPath" class="time-input" style="flex: 1; text-align: left; font-family: monospace; font-size: 13px;" placeholder="Ex: G:\Mon Drive\Pause ou C:\Users\Nom\Google Drive\Pause" readonly>
+                        <button type="button" id="browseFolderBtn" class="btn-primary" style="white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span>Choisir un dossier...</span>
+                        </button>
+                        <button type="button" id="openFolderBtn" class="btn-ghost" title="Ouvrir le dossier dans l'Explorateur Windows" style="display: none; white-space: nowrap;">
+                            Ouvrir
+                        </button>
+                    </div>
+                    <span class="rule-hint">
+                        Sélectionnez votre dossier <strong>Google Drive</strong> (par exemple <code>G:\Mon Drive</code> ou <code>G:\Mon Drive\Pause</code>) ou n'importe quel dossier local / OneDrive / Dropbox. Vos données y seront synchronisées automatiquement dans le fichier <code>pause_sync_data.json</code>.
+                    </span>
+                </label>
+            </div>
+
+            <!-- Résultat et détails -->
+            <p id="syncDetailMessage" class="rule-hint" style="margin: 4px 0 0; min-height: 18px;"></p>
+
+            <!-- Sauvegarde manuelle (Fichier) -->
+            <div class="sync-package-actions">
+                <span class="rule-hint" style="font-weight: 600;">Sauvegarde manuelle ponctuelle :</span>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="exportPackageBtn" class="btn-ghost" style="font-size: 12.5px; padding: 6px 12px;">
+                        Exporter un fichier (.pause-sync.json)
+                    </button>
+                    <label class="btn-ghost" style="font-size: 12.5px; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; margin: 0;">
+                        <span>Importer un fichier</span>
+                        <input type="file" id="importPackageFile" accept=".json" style="position: absolute; width: 0; height: 0; opacity: 0;">
+                    </label>
+                </div>
+            </div>
+        </section>
+
         <!-- Mises à jour : visible dans l'application Windows (window.psUpdater) -->
         <section id="updaterSection" class="update-settings-card" hidden>
             <div class="update-settings-header">

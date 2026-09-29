@@ -263,3 +263,180 @@ if (window.psUpdater && updaterSection) {
     window.psUpdater.onStatusChange(renderUpdaterState);
     window.psUpdater.getStatus().then(renderUpdaterState);
 }
+
+// ------------------------------------------------------------- Synchronisation (Google Drive & Dossier local)
+
+const syncSection = document.getElementById('syncSection');
+if (window.psSync && syncSection) {
+    syncSection.hidden = false;
+
+    const syncStatusPill = document.getElementById('syncStatusPill');
+    const syncNowBtn = document.getElementById('syncNowBtn');
+    const syncNowBtnText = document.getElementById('syncNowBtnText');
+    const syncIcon = document.getElementById('syncIcon');
+    const syncAutoToggle = document.getElementById('syncAutoToggle');
+    const syncLastTimeLabel = document.getElementById('syncLastTimeLabel');
+    const syncDetailMessage = document.getElementById('syncDetailMessage');
+    const syncFolderPath = document.getElementById('syncFolderPath');
+    const browseFolderBtn = document.getElementById('browseFolderBtn');
+    const openFolderBtn = document.getElementById('openFolderBtn');
+    const exportPackageBtn = document.getElementById('exportPackageBtn');
+    const importPackageFile = document.getElementById('importPackageFile');
+
+    function formatSyncTime(ts) {
+        if (!ts) return 'Jamais';
+        const d = new Date(ts);
+        const now = Date.now();
+        const diffSecs = Math.round((now - ts) / 1000);
+        if (diffSecs < 60) return "À l'instant";
+        if (diffSecs < 3600) return `Il y a ${Math.floor(diffSecs / 60)} min`;
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} à ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function renderSyncStatus(status) {
+        if (!status) return;
+        const { isSyncing, lastSyncTime, lastSyncStatus, lastSyncError, lastSyncMergedCount } = status;
+
+        syncLastTimeLabel.textContent = formatSyncTime(lastSyncTime);
+        syncIcon.classList.toggle('spinner-icon', Boolean(isSyncing));
+        syncNowBtn.disabled = Boolean(isSyncing);
+        syncNowBtnText.textContent = isSyncing ? 'Synchronisation...' : 'Synchroniser maintenant';
+
+        syncStatusPill.className = 'update-status-pill';
+        if (isSyncing) {
+            syncStatusPill.classList.add('update-status-pill--checking');
+            syncStatusPill.textContent = 'En cours...';
+            syncDetailMessage.textContent = 'Synchronisation bidirectionnelle en cours...';
+            syncDetailMessage.style.color = 'var(--muted)';
+        } else if (lastSyncStatus === 'error') {
+            syncStatusPill.classList.add('update-status-pill--error');
+            syncStatusPill.textContent = 'Erreur';
+            syncDetailMessage.textContent = `Échec : ${lastSyncError || 'Erreur inconnue'}`;
+            syncDetailMessage.style.color = 'var(--pomegranate)';
+        } else if (lastSyncStatus === 'success') {
+            syncStatusPill.classList.add('update-status-pill--latest');
+            syncStatusPill.textContent = 'Synchronisé';
+            const count = typeof lastSyncMergedCount === 'number' ? ` (${lastSyncMergedCount} journées traitées)` : '';
+            syncDetailMessage.textContent = `Synchronisation réussie avec succès${count}.`;
+            syncDetailMessage.style.color = 'var(--mint)';
+        } else {
+            syncStatusPill.classList.add('update-status-pill--latest');
+            syncStatusPill.textContent = 'Prêt';
+            syncDetailMessage.textContent = '';
+        }
+    }
+
+    function updateFolderUi(folder) {
+        if (syncFolderPath) syncFolderPath.value = folder || '';
+        if (openFolderBtn) openFolderBtn.style.display = folder ? 'inline-flex' : 'none';
+    }
+
+    // Chargement de la configuration initiale
+    window.psSync.getConfig().then((cfg) => {
+        syncAutoToggle.checked = Boolean(cfg.autoSync);
+        updateFolderUi(cfg.folderPath);
+    });
+
+    window.psSync.getStatus().then((status) => {
+        renderSyncStatus(status);
+        if (status && status.config) updateFolderUi(status.config.folderPath);
+    });
+    window.psSync.onStatusChange(renderSyncStatus);
+
+    // Bascule auto-sync
+    syncAutoToggle.addEventListener('change', () => {
+        window.psSync.saveConfig({ autoSync: syncAutoToggle.checked, enabled: true });
+    });
+
+    // Choix du dossier local ou Google Drive
+    browseFolderBtn.addEventListener('click', async () => {
+        try {
+            const folder = await window.psSync.chooseFolder();
+            if (folder) {
+                updateFolderUi(folder);
+                window.psSync.saveConfig({ folderPath: folder, enabled: true });
+                // Lancer une première synchronisation immédiate pour tester le dossier
+                syncNowBtn.click();
+            }
+        } catch (err) {
+            console.error('Erreur sélection dossier :', err);
+        }
+    });
+
+    // Ouvrir le dossier sélectionné dans l'Explorateur Windows
+    if (openFolderBtn) {
+        openFolderBtn.addEventListener('click', () => {
+            const folder = syncFolderPath ? syncFolderPath.value : '';
+            if (folder && window.psSync.openFolder) {
+                window.psSync.openFolder(folder);
+            }
+        });
+    }
+
+    // Déclenchement de la synchronisation
+    syncNowBtn.addEventListener('click', async () => {
+        if (!syncFolderPath.value) {
+            browseFolderBtn.click();
+            return;
+        }
+        try {
+            syncDetailMessage.textContent = 'Démarrage de la synchronisation...';
+            syncDetailMessage.style.color = 'var(--muted)';
+            const res = await window.psSync.syncNow();
+            if (!res.ok) {
+                syncDetailMessage.textContent = `Erreur : ${res.error || 'Échec de synchronisation'}`;
+                syncDetailMessage.style.color = 'var(--pomegranate)';
+            }
+        } catch (err) {
+            console.error('Erreur déclenchement synchro :', err);
+            syncDetailMessage.textContent = `Erreur : ${err.message || err}`;
+            syncDetailMessage.style.color = 'var(--pomegranate)';
+        }
+    });
+
+    // Exportation du paquet de sauvegarde
+    exportPackageBtn.addEventListener('click', async () => {
+        try {
+            const jsonStr = await window.psSync.exportPackage();
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pause_backup_${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Erreur export sauvegarde :', err);
+            alert(`Erreur lors de l'export : ${err.message || err}`);
+        }
+    });
+
+    // Importation du paquet de sauvegarde
+    importPackageFile.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const text = String(evt.target.result || '');
+                const res = await window.psSync.importPackage(text);
+                if (res.ok) {
+                    alert(`Restauration réussie ! ${res.mergedDaysCount || 0} journées d'historique fusionnées.`);
+                    location.reload();
+                } else {
+                    alert(`Échec de l'importation : ${res.error || 'Format non reconnu'}`);
+                }
+            } catch (err) {
+                console.error('Erreur import paquet :', err);
+                alert(`Erreur d'import : ${err.message || err}`);
+            } finally {
+                importPackageFile.value = '';
+            }
+        };
+        reader.readAsText(file);
+    });
+}
+

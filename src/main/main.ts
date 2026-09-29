@@ -9,6 +9,7 @@ import './shared'; // charge salat-core, day-core, salat-card comme globales
 import { Store } from './store';
 import { createHistory, HistoryManager } from './history';
 import { AppUpdater } from './updater';
+import { SyncManager } from './sync';
 import { generateXlsx, generateCsv } from './exporter';
 import { StoreChanges } from './types';
 
@@ -27,6 +28,7 @@ if (!app.requestSingleInstanceLock()) {
 let store: Store;
 let history: HistoryManager;
 let updater: AppUpdater;
+let syncManager: SyncManager;
 
 let mainWindow: BrowserWindow | null = null;
 let historyWindow: BrowserWindow | null = null;
@@ -45,6 +47,7 @@ app.whenReady().then(() => {
     store = new Store(path.join(userData, 'state.json'));
     history = createHistory(path.join(userData, 'history.sqlite'), broadcastHistoryChanged);
     updater = new AppUpdater(store);
+    syncManager = new SyncManager(store, history);
 
     if (store.value('salatAlertLead') === undefined) {
         store.set({ salatAlertLead: global.DEFAULT_ALERT_LEAD_MINS });
@@ -60,6 +63,8 @@ app.whenReady().then(() => {
 
     // Démarrage du planificateur de mise à jour automatique en arrière-plan
     updater.startBackgroundChecks();
+    // Démarrage du planificateur de synchronisation automatique
+    syncManager.startSchedule();
 
     ensureSalatDay().then(scheduleAlert).then(dispatchAlert);
     setInterval(() => ensureSalatDay().then(scheduleAlert).then(dispatchAlert), REFRESH_PERIOD_MS);
@@ -73,6 +78,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
     quitting = true;
     if (updater) updater.stopBackgroundChecks();
+    if (syncManager) syncManager.stopSchedule();
 });
 app.on('will-quit', () => {
     if (tray && !tray.isDestroyed()) tray.destroy();
@@ -134,6 +140,12 @@ function createTray(): void {
         { label: 'Historique', click: openHistoryWindow },
         { label: 'Réglages', click: openSettingsWindow },
         { type: 'separator' },
+        {
+            label: 'Synchroniser maintenant',
+            click: () => {
+                syncManager.sync().catch((err) => console.error('[Tray] Erreur synchro :', err));
+            }
+        },
         {
             label: 'Vérifier les mises à jour...',
             click: () => {
@@ -396,6 +408,9 @@ async function endPauseNow(): Promise<any> {
         const ramadan = Boolean(s.isRamadanMode);
         const { departureMins } = global.computeDay({ clockIn, dayPauses: pauses, activeSecs: 0, ramadan });
         await history.saveDay({ date: s.workDate, clockIn, ramadan, departure: global.minsToHM(departureMins), pauses });
+        if (syncManager && syncManager.getConfig().enabled && syncManager.getConfig().autoSync) {
+            syncManager.sync().catch(() => {});
+        }
     }
     return { ok: true };
 }
@@ -428,6 +443,9 @@ function archivePreviousDay(): void {
     const pauses = s.pauses || [];
     const { departureMins } = global.computeDay({ clockIn, dayPauses: pauses, activeSecs: 0, ramadan });
     history.saveDay({ date: s.workDate, clockIn, ramadan, departure: global.minsToHM(departureMins), pauses });
+    if (syncManager && syncManager.getConfig().enabled && syncManager.getConfig().autoSync) {
+        syncManager.sync().catch(() => {});
+    }
 }
 
 function stampArrivalOnBootLaunch(): void {
@@ -451,6 +469,14 @@ function onStoreChanged(changes: StoreChanges): void {
     if (changes.isPaused) dispatchPauseScreens();
     if (changes.salatDay || changes.salatAlertLead) scheduleAlert();
     if (changes.salatDay || changes.salatAlertLead || changes.salatDismissedKey) dispatchAlert();
+
+    // Enregistrement d'un timestamp de modification de config pour la synchronisation
+    if (changes[global.DAY_RULES_KEY] || changes.isRamadanMode || changes.salatAlertLead || changes.autoLaunch) {
+        store.set({ syncConfigUpdatedAt: Date.now() });
+        if (syncManager && syncManager.getConfig().enabled && syncManager.getConfig().autoSync) {
+            setTimeout(() => syncManager.sync().catch(() => {}), 3000);
+        }
+    }
 }
 
 // ---------------------------------------------------------------- IPC
@@ -490,6 +516,20 @@ function registerIpc(): void {
         const days = await history.listDays(opts || {});
         return generateCsv(days);
     });
+
+    // Synchronisation (Historique & Configuration)
+    ipcMain.handle('sync:getConfig', () => syncManager.getConfig());
+    ipcMain.handle('sync:saveConfig', (_e, config) => syncManager.saveConfig(config));
+    ipcMain.handle('sync:syncNow', () => syncManager.sync());
+    ipcMain.handle('sync:chooseFolder', (e) => syncManager.chooseFolder(BrowserWindow.fromWebContents(e.sender)));
+    ipcMain.handle('sync:openFolder', (_e, folderPath) => {
+        const p = folderPath || syncManager.getConfig().folderPath;
+        if (p && require('fs').existsSync(p)) return shell.openPath(p);
+        return false;
+    });
+    ipcMain.handle('sync:exportPackage', () => syncManager.exportSyncPackage());
+    ipcMain.handle('sync:importPackage', (_e, jsonStr) => syncManager.importSyncPackage(jsonStr));
+    ipcMain.handle('sync:getStatus', () => syncManager.getStatus());
 }
 
 function handleMessage(msg: any): Promise<any> {
