@@ -1,0 +1,230 @@
+/* Page Réglages — même palette Majorelle que le reste de l'application. */
+
+:root {
+    --majorelle: #3b3dbf;
+    --majorelle-deep: #2a2c93;
+    --saffron: #f2b632;
+    --mint: #1e9e6a;
+    --pomegranate: #d2344b;
+    --ink: #171a3a;
+    --plaster: #f1f2f7;
+    --surface: #ffffff;
+    --surface-sunk: #f6f7fb;
+    --line: #dfe2ee;
+    --text: var(--ink);
+    --muted: #666b8b;
+    --field-bg: #eef0f8;
+    --radius-lg: 14px;
+    --radius-md: 10px;
+    --font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+
+body {
+    font-family: var(--font-ui);
+    color: var(--text);
+    background: var(--plaster);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+/* ---------- En-tête ---------- */
+
+.masthead {
+    background: var(--majorelle);
+    color: #fff;
+}
+.masthead-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 22px 20px;
+}
+.title-block { display: flex; align-items: center; gap: 12px; }
+.brand-mark-bg { fill: rgba(255, 255, 255, 0.14); }
+.brand-mark-dot { fill: var(--saffron); }
+.masthead h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+
+/* ---------- Corps ---------- */
+
+.page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 22px 20px 48px;
+}
+.intro {
+    margin: 0 0 22px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+.intro strong { color: var(--text); }
+
+.modes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+@media (max-width: 620px) {
+    .modes { grid-template-columns: 1fr; }
+}
+
+.mode-card {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    padding: 18px 18px 20px;
+    box-shadow: 0 1px 2px rgba(23, 26, 58, 0.04);
+}
+.mode-card--ramadan {
+    background: linear-gradient(180deg, #1c1f66 0%, #171a3a 100%);
+    border-color: rgba(242, 182, 50, 0.45);
+    color: #eef0ff;
+}
+.mode-card legend {
+    padding: 0 8px;
+    font-weight: 700;
+    font-size: 15px;
+}
+.mode-card--ramadan legend { color: var(--saffron); }
+
+.rule-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 14px;
+}
+.rule-label { font-size: 13px; font-weight: 600; }
+.rule-hint { font-size: 12px; color: var(--muted); }
+.mode-card--ramadan .rule-hint { color: #a3a7d4; }
+
+.time-input {
+    font-family: var(--font-ui);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--field-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 9px 12px;
+    width: 100%;
+}
+.mode-card--ramadan .time-input {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+.mode-card--ramadan .time-input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.8; }
+.time-input:focus-visible { outline: 2px solid var(--majorelle); outline-offset: 1px; }
+.mode-card--ramadan .time-input:focus-visible { outline-color: var(--saffron); }
+.time-input.is-invalid { border-color: var(--pomegranate); background: #fbe3e7; }
+
+/* ---------- Actions ---------- */
+
+.form-error {
+    margin: 18px 0 0;
+    min-height: 20px;
+    color: var(--pomegranate);
+    font-size: 13px;
+    font-weight: 600;
+}
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+.saved-note {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mint);
+    opacity: 0;
+    transition: opacity 0.2s var(--ease);
+}
+.saved-note.is-shown { opacity: 1; }
+
+.btn-ghost, .btn-primary {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 10px 20px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.12s var(--ease), filter 0.15s var(--ease);
+}
+.btn-ghost {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--text);
+}
+.btn-ghost:hover { background: var(--surface-sunk); }
+.btn-primary {
+    background: var(--majorelle);
+    color: #fff;
+    margin-left: 0;
+}
+.actions .btn-primary { margin-left: 0; }
+.btn-primary:hover { filter: brightness(1.06); }
+.btn-primary:active, .btn-ghost:active { transform: translateY(1px); }
+.btn-ghost:focus-visible, .btn-primary:focus-visible { outline: 2px solid var(--majorelle); outline-offset: 2px; }
+
+/* ---------- Démarrage automatique (application Windows) ---------- */
+
+.startup-card {
+    margin-top: 26px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    padding: 18px 18px 20px;
+    box-shadow: 0 1px 2px rgba(23, 26, 58, 0.04);
+}
+.startup-title {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 700;
+}
+.startup-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+.startup-toggle-label { font-size: 14px; font-weight: 600; }
+.startup-toggle .switch-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.startup-toggle .switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--line);
+    transition: background-color 0.2s var(--ease);
+    flex: none;
+}
+.startup-toggle .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(23, 26, 58, 0.3);
+    transition: transform 0.2s var(--ease);
+}
+.startup-toggle .switch-input:checked + .switch { background: var(--mint); }
+.startup-toggle .switch-input:checked + .switch::after { transform: translateX(18px); }
+.startup-toggle .switch-input:focus-visible + .switch { outline: 2px solid var(--majorelle); outline-offset: 2px; }
+.startup-card .rule-hint { margin: 12px 0 0; line-height: 1.5; }
+.startup-card .rule-hint strong { color: var(--text); }

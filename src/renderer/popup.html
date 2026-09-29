@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Pause &amp; Salat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="desktop.css">
+    <link rel="stylesheet" href="updater.css">
+</head>
+<body>
+    <div class="app" id="appWrapper">
+        <header class="topbar">
+            <div class="brand">
+                <svg class="brand-mark" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+                    <rect width="32" height="32" rx="8" class="brand-mark-bg"/>
+                    <g fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round">
+                        <rect x="10" y="10" width="12" height="12"/>
+                        <rect x="10" y="10" width="12" height="12" transform="rotate(45 16 16)"/>
+                    </g>
+                    <circle cx="16" cy="16" r="2.4" class="brand-mark-dot"/>
+                </svg>
+                <h1 class="brand-name">Pause &amp; Salat</h1>
+            </div>
+
+            <div class="topbar-actions">
+                <label class="mode-toggle" for="ramadanToggle">
+                    <span class="mode-label">Ramadan</span>
+                    <input type="checkbox" id="ramadanToggle" class="switch-input" role="switch">
+                    <span class="switch" aria-hidden="true"></span>
+                </label>
+                <button id="settingsBtn" class="icon-btn" type="button" title="Régler les règles de la journée" aria-label="Réglages">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </button>
+                <button id="historyBtn" class="icon-btn" type="button" title="Voir l'historique" aria-label="Voir l'historique">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="4" width="18" height="17" rx="2"/>
+                        <path d="M3 9h18M8 2v4M16 2v4M7 13h4M7 17h7"/>
+                    </svg>
+                    <span id="historyStatus" class="history-status" data-state="idle" aria-hidden="true"></span>
+                </button>
+                <button id="pinBtn" class="icon-btn" type="button" title="Définir un code PIN pour l'écran de pause" aria-label="Code PIN de l'écran de pause">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="4" y="11" width="16" height="10" rx="2"/>
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                    </svg>
+                </button>
+                <button id="resetBtn" class="icon-btn" type="button" title="Réinitialiser la journée" aria-label="Réinitialiser la journée">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                        <path d="M3 4v5h5"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="stack">
+            <!-- SALAT -->
+            <section class="salat" aria-labelledby="salatTitle">
+                <div id="salatBanner" class="salat-next">
+                    <span class="salat-caption">
+                        Prochaine prière&nbsp;: <span id="salatName" class="salat-name">--</span>
+                        à <span id="salatTime" class="salat-time">--:--</span>
+                    </span>
+                    <span id="salatCountdown" class="salat-countdown" aria-live="off">--:--:--</span>
+                    <div class="salat-actions">
+                        <button type="button" id="reminderTrigger" class="salat-reminder" popovertarget="reminderMenu"
+                                aria-haspopup="listbox" aria-expanded="false" aria-controls="reminderMenu">
+                            <svg class="reminder-bell" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                                <path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>
+                            </svg>
+                            <span id="reminderLabel">Rappel 10 min avant</span>
+                            <svg class="reminder-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </button>
+                        <button type="button" id="salatRetry" class="salat-retry" hidden>Réessayer</button>
+                    </div>
+                </div>
+                <h2 id="salatTitle" class="salat-title" lang="ar" dir="rtl">الصلاة أولا</h2>
+            </section>
+
+            <!-- ARRIVÉE & CAPITAL PAUSE -->
+            <section class="day-grid">
+                <div class="field-card">
+                    <label for="clockIn" class="field-label">Heure d'arrivée</label>
+                    <input type="time" id="clockIn" class="time-input time-input--lg">
+                </div>
+                <div class="field-card field-card--budget">
+                    <span id="availLabel" class="field-label">Pause dispo (max 1h 00m)</span>
+                    <div id="availableBreakDisplay" class="big-value">00h 00m</div>
+                </div>
+            </section>
+
+            <!-- PAUSES -->
+            <section id="pauseSection" class="pause-panel">
+                <div class="timer-row" id="timerRow">
+                    <div class="timer-info">
+                        <span class="field-label"><span class="live-dot" aria-hidden="true"></span>Pause en cours</span>
+                        <div id="activePauseDisplay" class="timer-value">00:00:00</div>
+                    </div>
+                    <button id="pauseActionBtn" class="btn-action btn-start" type="button">Démarrer la pause</button>
+                </div>
+
+                <div class="history">
+                    <div class="history-header">
+                        <h3 class="history-title">Pauses du jour</h3>
+                        <div id="totalPauseMins" class="history-total">Total: 0h 00m</div>
+                    </div>
+                    <div id="pausesList" class="pauses-list"></div>
+                </div>
+            </section>
+
+            <!-- RÉSULTATS -->
+            <section class="summary" aria-label="Fin de journée">
+                <div class="stat">
+                    <span class="stat-label">Sortie réelle</span>
+                    <span id="clockOut" class="stat-val">17:00</span>
+                    <span class="badge" id="limitBadge">Entre 17:00 et 18:00</span>
+                </div>
+                <div class="stat stat--end">
+                    <span class="stat-label">Temps restant</span>
+                    <span id="timer" class="stat-val stat-val--countdown">00:00:00</span>
+                </div>
+            </section>
+        </main>
+
+        <!-- Menu du rappel : dans le wrapper pour hériter du thème Ramadan -->
+        <div id="reminderMenu" class="reminder-menu" popover role="listbox" tabindex="-1" aria-label="Rappel avant la prière"></div>
+    </div>
+    <script src="../shared/salat-core.js"></script>
+    <script src="../shared/day-core.js"></script>
+    <script src="reminder-picker.js"></script>
+    <script src="pin-core.js"></script>
+    <script src="pin-dialog.js"></script>
+    <script src="updater-ui.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

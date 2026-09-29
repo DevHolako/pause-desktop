@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Réglages — Pause &amp; Salat</title>
+    <link rel="icon" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="settings.css">
+    <link rel="stylesheet" href="updater.css">
+</head>
+<body>
+    <header class="masthead">
+        <div class="masthead-inner">
+            <div class="title-block">
+                <svg class="brand-mark" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true">
+                    <rect width="32" height="32" rx="8" class="brand-mark-bg"/>
+                    <g fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round">
+                        <rect x="10" y="10" width="12" height="12"/>
+                        <rect x="10" y="10" width="12" height="12" transform="rotate(45 16 16)"/>
+                    </g>
+                    <circle cx="16" cy="16" r="2.4" class="brand-mark-dot"/>
+                </svg>
+                <h1>Réglages</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="page">
+        <p class="intro">
+            Adaptez les règles de la journée à votre contrat. La <strong>pause disponible</strong>
+            correspond au capital pause fixé ci-dessous, indépendamment de l'heure d'arrivée ; l'heure
+            de sortie est calculée à partir de la durée de travail et bornée par les deux heures de sortie.
+        </p>
+
+        <form id="rulesForm" novalidate>
+            <div class="modes">
+                <fieldset class="mode-card" data-mode="normal">
+                    <legend>Mode normal</legend>
+                    <label class="rule-field">
+                        <span class="rule-label">Durée de travail</span>
+                        <input type="time" name="workMins" class="time-input" required>
+                        <span class="rule-hint">temps de travail effectif (ex. 08:00)</span>
+                    </label>
+                    <label class="rule-field">
+                        <span class="rule-label">Pause maximum</span>
+                        <input type="time" name="maxPauseMins" class="time-input" required>
+                        <span class="rule-hint">capital pause de la journée (ex. 01:00)</span>
+                    </label>
+                    <label class="rule-field">
+                        <span class="rule-label">Sortie au plus tôt</span>
+                        <input type="time" name="minOut" class="time-input" required>
+                    </label>
+                    <label class="rule-field">
+                        <span class="rule-label">Sortie au plus tard</span>
+                        <input type="time" name="maxOut" class="time-input" required>
+                    </label>
+                </fieldset>
+
+                <fieldset class="mode-card mode-card--ramadan" data-mode="ramadan">
+                    <legend>Mode Ramadan</legend>
+                    <label class="rule-field">
+                        <span class="rule-label">Durée de travail</span>
+                        <input type="time" name="workMins" class="time-input" required>
+                        <span class="rule-hint">temps de travail effectif (ex. 07:00)</span>
+                    </label>
+                    <label class="rule-field">
+                        <span class="rule-label">Pause maximum</span>
+                        <input type="time" name="maxPauseMins" class="time-input" required>
+                        <span class="rule-hint">capital pause de la journée (ex. 01:00)</span>
+                    </label>
+                    <label class="rule-field">
+                        <span class="rule-label">Sortie au plus tôt</span>
+                        <input type="time" name="minOut" class="time-input" required>
+                    </label>
+                    <label class="rule-field">
+                        <span class="rule-label">Sortie au plus tard</span>
+                        <input type="time" name="maxOut" class="time-input" required>
+                    </label>
+                </fieldset>
+            </div>
+
+            <p id="formError" class="form-error" role="alert"></p>
+
+            <div class="actions">
+                <button type="button" id="resetBtn" class="btn-ghost">Valeurs par défaut</button>
+                <span id="savedNote" class="saved-note" role="status" aria-live="polite"></span>
+                <button type="submit" id="saveBtn" class="btn-primary">Enregistrer</button>
+            </div>
+        </form>
+
+        <!-- Démarrage : visible seulement dans l'application Windows (window.psSystem) -->
+        <section id="startupSection" class="startup-card" hidden>
+            <h2 class="startup-title">Démarrage automatique</h2>
+            <label class="startup-toggle">
+                <input type="checkbox" id="autoLaunch" class="switch-input" role="switch">
+                <span class="switch" aria-hidden="true"></span>
+                <span class="startup-toggle-label">Démarrer avec Windows</span>
+            </label>
+            <p class="rule-hint">
+                À l'ouverture automatique au démarrage de Windows, l'heure de ce démarrage est inscrite
+                comme <strong>heure d'arrivée</strong> du jour. Vous pouvez toujours la corriger dans la fenêtre principale.
+            </p>
+        </section>
+
+        <!-- Mises à jour : visible dans l'application Windows (window.psUpdater) -->
+        <section id="updaterSection" class="update-settings-card" hidden>
+            <div class="update-settings-header">
+                <div>
+                    <h2 class="update-settings-title">Mise à jour de l'application</h2>
+                    <div class="update-settings-meta">
+                        <span id="currentVersionLabel">Version --</span>
+                        <span id="lastCheckLabel" class="rule-hint">Dernière vérification : --</span>
+                    </div>
+                </div>
+                <div class="update-settings-status-row">
+                    <span id="updateStatusPill" class="update-status-pill update-status-pill--latest">À jour</span>
+                    <button type="button" id="checkUpdateBtn" class="btn-ghost" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg id="checkUpdateIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                        </svg>
+                        <span id="checkUpdateBtnText">Vérifier</span>
+                    </button>
+                </div>
+            </div>
+
+            <p id="updateStatusDetail" class="rule-hint" style="margin: 0;"></p>
+
+            <div id="updateActionRow" style="display: none; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid var(--line);">
+                <span id="updateActionDescription" style="font-size: 13px; font-weight: 600;"></span>
+                <button type="button" id="updateNowBtn" class="btn-primary" style="padding: 7px 16px; font-size: 13px;">
+                    Télécharger
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script src="../shared/salat-core.js"></script>
+    <script src="../shared/day-core.js"></script>
+    <script src="updater-ui.js"></script>
+    <script src="settings.js"></script>
+</body>
+</html>

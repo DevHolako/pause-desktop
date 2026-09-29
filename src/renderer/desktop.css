@@ -1,0 +1,13 @@
+/* Ajustements propres au bureau : la fenêtre est redimensionnable, alors que le popup
+   de l'extension avait une largeur fixe de 460 px. On garde la même colonne, centrée. */
+
+body {
+    width: 100%;
+    min-height: 100vh;
+}
+
+.app {
+    max-width: 476px;
+    margin: 0 auto;
+    min-height: 100vh;
+}

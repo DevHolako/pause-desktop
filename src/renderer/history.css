@@ -1,0 +1,632 @@
+/* ============================================================
+   Historique — Pause & Salat
+   Journées en bandes horaires (07:00 → 19:00), Majorelle / safran.
+   ============================================================ */
+
+:root {
+    --majorelle: #3b3dbf;
+    --majorelle-deep: #2a2c93;
+    --saffron: #f2b632;
+    --saffron-ink: #3a2a00;
+    --pomegranate: #d2344b;
+    --pomegranate-soft: #fbe3e7;
+    --ink: #171a3a;
+
+    --bg: #f1f2f7;
+    --surface: #ffffff;
+    --surface-hover: #f7f8fc;
+    --line: #dfe2ee;
+    --line-strong: #c7cbe0;
+    --text: var(--ink);
+    --muted: #666b8b;
+    --track: #e6e8f2;
+    --work: var(--majorelle);
+    --pause: var(--saffron);
+    --min-line: var(--ink);
+    --focus: var(--majorelle);
+    --masthead-bg: var(--majorelle);
+
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --radius-sm: 6px;
+    --font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-kufi: 'Reem Kufi', 'Instrument Sans', sans-serif;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    --row-cols: 132px minmax(0, 1fr) 128px 116px 24px;
+
+    --zellige: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cg fill='none' stroke='white' stroke-width='1'%3E%3Crect x='11' y='11' width='14' height='14'/%3E%3Crect x='11' y='11' width='14' height='14' transform='rotate(45 18 18)'/%3E%3Cpath d='M0 0L4 4M36 0L32 4M0 36L4 32M36 36L32 32'/%3E%3C/g%3E%3C/svg%3E");
+
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f1133;
+        --surface: #16194a;
+        --surface-hover: #1c2058;
+        --line: rgba(255, 255, 255, 0.1);
+        --line-strong: rgba(255, 255, 255, 0.2);
+        --text: #eef0ff;
+        --muted: #a3a7d4;
+        --track: rgba(255, 255, 255, 0.07);
+        --work: #6c6ff0;
+        --min-line: #eef0ff;
+        --pomegranate: #ff6b7f;
+        --pomegranate-soft: rgba(255, 107, 127, 0.14);
+        --focus: var(--saffron);
+        --masthead-bg: #1c1f66;
+        color-scheme: dark;
+    }
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* ---------- Masthead ---------- */
+
+.masthead {
+    position: relative;
+    color: #fff;
+    background: var(--masthead-bg);
+    overflow: hidden;
+}
+
+.masthead::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--zellige);
+    opacity: 0.14;
+    -webkit-mask-image: linear-gradient(90deg, transparent 20%, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 20%, #000 100%);
+    pointer-events: none;
+}
+
+.masthead-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 28px 32px;
+}
+
+.title-block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.brand-mark-bg {
+    fill: rgba(255, 255, 255, 0.14);
+}
+
+.brand-mark-dot {
+    fill: var(--saffron);
+}
+
+h1 {
+    margin: 0;
+    font-family: var(--font-kufi);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.segmented {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.segmented button {
+    border: none;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font: 600 13px/1 var(--font-ui);
+    color: rgba(255, 255, 255, 0.8);
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.segmented button:hover {
+    color: #fff;
+}
+
+.segmented button[aria-checked="true"] {
+    color: var(--saffron-ink);
+    background: var(--saffron);
+}
+
+.segmented button:focus-visible,
+.btn-ghost:focus-visible {
+    outline-color: #fff;
+}
+
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    font: 600 13px/1 var(--font-ui);
+    color: #fff;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.btn-ghost:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* ---------- Page ---------- */
+
+.page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 28px 32px 64px;
+}
+
+.summary {
+    max-width: 68ch;
+    margin: 0 0 22px;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--muted);
+}
+
+.summary strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-bottom: 18px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.swatch {
+    display: inline-block;
+    width: 18px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.swatch--work { background: var(--work); }
+.swatch--pause { background: var(--pause); }
+.swatch--min {
+    width: 2px;
+    height: 14px;
+    border-radius: 0;
+    background: repeating-linear-gradient(var(--min-line) 0 3px, transparent 3px 5px);
+}
+
+/* ---------- Axe horaire ---------- */
+
+.axis-row {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: var(--row-cols);
+    column-gap: 20px;
+    padding: 10px 16px 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+}
+
+.axis {
+    grid-column: 2;
+    position: relative;
+    height: 16px;
+}
+
+.axis-tick {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-size: 11.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+}
+
+.axis-tick:first-child { transform: none; }
+.axis-tick:last-child { transform: translateX(-100%); }
+
+/* ---------- Semaines ---------- */
+
+.days {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    margin-top: 18px;
+}
+
+.week-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+    margin: 0 4px 10px;
+}
+
+.week-title {
+    margin: 0;
+    font-family: var(--font-kufi);
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.week-meta {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.week-days {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+/* ---------- Journée ---------- */
+
+.day + .day {
+    border-top: 1px solid var(--line);
+}
+
+.day-summary {
+    display: grid;
+    grid-template-columns: var(--row-cols);
+    align-items: center;
+    column-gap: 20px;
+    padding: 14px 16px;
+    list-style: none;
+    cursor: pointer;
+    transition: background-color 0.15s var(--ease);
+}
+
+.day-summary::-webkit-details-marker {
+    display: none;
+}
+
+.day-summary:hover {
+    background: var(--surface-hover);
+}
+
+.day-summary:focus-visible {
+    outline-offset: -2px;
+}
+
+.day-date {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.day-num {
+    font-family: var(--font-kufi);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.day-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.ramadan-tag {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    color: var(--saffron-ink);
+    background: var(--saffron);
+    align-self: center;
+}
+
+.day.is-today .day-num {
+    color: var(--majorelle);
+}
+
+@media (prefers-color-scheme: dark) {
+    .day.is-today .day-num { color: var(--saffron); }
+}
+
+/* Bande horaire */
+.strip {
+    position: relative;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    background:
+        repeating-linear-gradient(90deg, transparent 0 calc(100% / 12 - 1px), var(--line) calc(100% / 12 - 1px) calc(100% / 12)),
+        var(--track);
+}
+
+.strip-work,
+.strip-pause {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+}
+
+.strip-work {
+    border-radius: var(--radius-sm);
+    background: var(--work);
+    transform-origin: left center;
+}
+
+.strip-pause {
+    top: 3px;
+    bottom: 3px;
+    border-radius: 3px;
+    background: var(--pause);
+    box-shadow: 0 0 0 2px var(--work);
+}
+
+.strip-min {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    width: 2px;
+    margin-left: -1px;
+    background: repeating-linear-gradient(var(--min-line) 0 3px, transparent 3px 5px);
+}
+
+.day-span {
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.day-span .arrow {
+    margin: 0 4px;
+    font-weight: 400;
+    color: var(--muted);
+}
+
+.day-pauses {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.day-pauses strong {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.chevron {
+    color: var(--muted);
+    transition: transform 0.25s var(--ease);
+}
+
+.day[open] .chevron {
+    transform: rotate(180deg);
+}
+
+/* Détail d'une journée */
+.day-detail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 4px 16px 16px calc(16px + 132px + 20px);
+}
+
+.pause-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pause-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.pause-chip .p-num {
+    font-weight: 700;
+    color: var(--majorelle);
+}
+
+@media (prefers-color-scheme: dark) {
+    .pause-chip .p-num { color: var(--saffron); }
+}
+
+.pause-chip .p-len {
+    color: var(--muted);
+}
+
+.no-pause {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.btn-delete {
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font: 600 13px/1 var(--font-ui);
+    color: var(--pomegranate);
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.btn-delete:hover {
+    background: var(--pomegranate-soft);
+    border-color: var(--pomegranate);
+}
+
+/* ---------- États ---------- */
+
+.status {
+    margin: 40px auto 0;
+    max-width: 52ch;
+    padding: 28px 24px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    color: var(--muted);
+}
+
+.status.is-error {
+    color: var(--pomegranate);
+    border-color: var(--pomegranate);
+}
+
+/* Entrée : les bandes se déroulent une seule fois au chargement */
+.is-intro .strip-work {
+    animation: strip-grow 0.6s var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+@keyframes strip-grow {
+    from { transform: scaleX(0); }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 760px) {
+    :root {
+        --row-cols: 1fr auto;
+    }
+
+    .masthead-inner,
+    .page {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    h1 {
+        font-size: 32px;
+    }
+
+    .toolbar {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .axis-row {
+        display: none;
+    }
+
+    .day-summary {
+        grid-template-areas:
+            "date chevron"
+            "strip strip"
+            "span pauses";
+        row-gap: 10px;
+    }
+
+    .day-date { grid-area: date; }
+    .strip { grid-area: strip; }
+    .day-span { grid-area: span; }
+    .day-pauses { grid-area: pauses; text-align: right; }
+    .chevron { grid-area: chevron; justify-self: end; }
+
+    .day-detail {
+        padding-left: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+.btn-retry {
+    margin-top: 14px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 999px;
+    font: 600 13px/1 var(--font-ui);
+    color: var(--saffron-ink);
+    background: var(--saffron);
+    cursor: pointer;
+}
+
+.btn-retry:hover {
+    filter: brightness(1.08);
+}

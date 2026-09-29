@@ -1,0 +1,61 @@
+{
+  "name": "pause-salat-desktop",
+  "productName": "Pause & Salat",
+  "version": "1.0.0",
+  "description": "Suivez votre journée de 8 h, vos pauses et les horaires de prière. Version Windows avec écran de pause verrouillé par code PIN.",
+  "main": "dist/main/main.js",
+  "author": "Weshore",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/weshore/pause-salat-desktop.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win nsis",
+    "release": "npm run build && electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "sql.js": "^1.14.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/sql.js": "^1.4.11",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "typescript": "^7.0.2"
+  },
+  "build": {
+    "appId": "com.weshore.pause-salat",
+    "productName": "Pause & Salat",
+    "publish": {
+      "provider": "github",
+      "owner": "weshore",
+      "repo": "pause-salat-desktop"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/main/**/*",
+      "src/renderer/**/*",
+      "src/shared/**/*",
+      "build/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Pause & Salat"
+    }
+  }
+}
