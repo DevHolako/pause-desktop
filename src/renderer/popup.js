@@ -40,13 +40,11 @@ const reminderPicker = createReminderPicker({
     onChange: (lead) => chrome.storage.local.set({ salatAlertLead: lead })
 });
 const historyStatus = document.getElementById('historyStatus');
-const pinBtn = document.getElementById('pinBtn');
 
 // --- INITIALISATION ---
-chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError', 'salatAlertLead', PIN_HASH_KEY, DAY_RULES_KEY], async (res) => {
+chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError', 'salatAlertLead', DAY_RULES_KEY], async (res) => {
     isRamadanMode = res.isRamadanMode || false;
     applyDayRulesConfig(res[DAY_RULES_KEY]); // règles configurées (ou défauts) avant tout calcul
-    updatePinButton(Boolean(res[PIN_HASH_KEY]));
     salatDay = res.salatDay || null;
     salatError = res.salatError || null;
 
@@ -91,7 +89,6 @@ chrome.storage.onChanged.addListener((changes) => {
             updateUI();
         });
     }
-    if (changes[PIN_HASH_KEY]) updatePinButton(Boolean(changes[PIN_HASH_KEY].newValue));
     if (changes[DAY_RULES_KEY]) {
         // Règles modifiées depuis la page Réglages : recalcul immédiat
         applyDayRulesConfig(changes[DAY_RULES_KEY].newValue);
@@ -154,7 +151,6 @@ pauseActionBtn.addEventListener('click', async () => {
         isPaused = true;
         pauseStartTime = Date.now();
     } else {
-        if (!(await confirmPin('Terminer la pause'))) return;
         if (!isPaused) return; // terminée entre-temps sur l'écran de pause
         isPaused = false;
         pauses = recordPause(pauses, pauseStartTime, Date.now());
@@ -174,8 +170,6 @@ document.getElementById('settingsBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', async () => {
-    // Réinitialiser termine aussi la pause en cours : même code que pour la terminer
-    if (isPaused && !(await confirmPin('Réinitialiser la journée'))) return;
     if (!confirm("Réinitialiser toutes les données de la journée ?")) return;
     const res = await sendHistoryMessage({ type: 'history:deleteDay', date: workDate });
     if (!res.ok) console.error("[Pause & Salat] Suppression de l'historique du jour impossible :", res.error);
@@ -183,14 +177,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
     chrome.storage.local.remove(DAY_KEYS, () => location.reload());
 });
 
-pinBtn.addEventListener('click', editPin);
-
 // --- FONCTIONS ---
-
-function updatePinButton(isSet) {
-    pinBtn.classList.toggle('is-set', isSet);
-    pinBtn.title = isSet ? "Code PIN actif : modifier ou supprimer" : "Définir un code PIN pour l'écran de pause";
-}
 
 function applyModeStyles() {
     appWrapper.classList.toggle('ramadan-active', isRamadanMode);

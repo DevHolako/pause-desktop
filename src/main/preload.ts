@@ -1,7 +1,7 @@
 // Pont entre le processus principal et les fenêtres.
 // Expose un objet `chrome` minimal (storage.local, runtime, tabs) de même forme que l'API
 // de l'extension : les fichiers d'interface (popup.js, pause.js…) tournent sans modification.
-// En plus, `psPin`, `psHistory`, `psSystem` et `psUpdater` donnent accès au code PIN,
+// En plus, `psHistory`, `psSystem` et `psUpdater` donnent accès
 // à l'historique SQLite, aux réglages système et à l'auto-updater GitHub Releases.
 
 import { ipcRenderer } from 'electron';
@@ -84,13 +84,6 @@ const chromeShim = {
     }
 };
 
-const psPin = {
-    isSet: () => ipcRenderer.invoke('pin:isSet'),
-    check: (pin: string | number) => ipcRenderer.invoke('pin:check', pin),
-    set: (current: string | number, next: string | number) => ipcRenderer.invoke('pin:set', { current, next }),
-    remove: (current: string | number) => ipcRenderer.invoke('pin:remove', current)
-};
-
 const psHistory = {
     listDays: (opts?: any) => ipcRenderer.invoke('history:listDays', opts),
     exportFile: () => ipcRenderer.invoke('history:exportFile'),
@@ -138,7 +131,6 @@ function define(name: string, value: any): void {
 }
 
 define('chrome', chromeShim);
-define('psPin', psPin);
 define('psHistory', psHistory);
 define('psSystem', psSystem);
 define('psUpdater', psUpdater);

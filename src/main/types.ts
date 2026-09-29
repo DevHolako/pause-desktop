@@ -56,7 +56,6 @@ export interface StoreValues {
     isPaused?: boolean;
     pauseStartTime?: number | null;
     isRamadanMode?: boolean;
-    pausePinSet?: boolean;
     lastUpdateCheck?: number;
     [key: string]: any;
 }
@@ -67,12 +66,6 @@ export interface StoreChange {
 }
 
 export type StoreChanges = Record<string, StoreChange>;
-
-export interface PinVerdict {
-    ok: boolean;
-    error?: 'pin' | 'wait' | 'format';
-    retryInSecs?: number;
-}
 
 // ------------------------------------------------------------- Types Auto-Updater
 

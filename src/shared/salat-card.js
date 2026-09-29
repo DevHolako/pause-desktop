@@ -74,22 +74,6 @@ var OVERLAY_CSS = `
     .close:hover { filter: brightness(1.08); }
     .close:active { transform: translateY(2px); box-shadow: 0 1px 0 #b8861b; }
     .close:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
-    .pin-form { margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-    .pin-form .close { margin-top: 0; }
-    .pin-input {
-        width: 220px; box-sizing: border-box;
-        padding: 12px 16px;
-        border: 2px solid var(--border); border-radius: 14px;
-        font-family: inherit; font-size: 28px; font-weight: 700; letter-spacing: 0.4em; text-align: center;
-        color: #fff; background: rgba(0, 0, 0, 0.25);
-        outline: none;
-        user-select: text;
-    }
-    .pin-input::placeholder { color: rgba(255, 255, 255, 0.4); letter-spacing: normal; font-size: 16px; font-weight: 600; }
-    .pin-input:focus-visible { border-color: var(--accent); }
-    .pin-input.is-wrong { border-color: #ff6b7f; animation: pin-shake 0.35s ease; }
-    .pin-error { margin: 0; min-height: 20px; font-size: 15px; font-weight: 600; color: #ffb3bd; }
-    @keyframes pin-shake { 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-4px); } }
     .rule { width: 56px; height: 4px; margin: 24px auto 0; border-radius: 4px; background: var(--accent); }
     .compact .veil { padding: 0; }
     .compact .card { width: 100%; height: 100%; border-radius: 0; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }

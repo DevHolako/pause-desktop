@@ -1,14 +1,12 @@
-# Pause & Salat — application Windows
+# Pause — application Windows
 
-Version bureau (Electron + TypeScript 7) de « Pause & Salat ». Suivi de la journée de travail, capital pause, horaires de prière Aladhan, historique SQLite local, code PIN de protection de l'écran de pause et **mises à jour automatiques via GitHub Releases**.
+Version bureau (Electron + TypeScript 7) de « Pause ». Suivi de la journée de travail, capital pause, horaires de prière Aladhan, historique SQLite local et **mises à jour automatiques via GitHub Releases**.
 
 ## Pourquoi une application plutôt qu'une extension
 
 Une extension de navigateur ne voit que les onglets et fenêtres Chrome. L'application, elle, agit au niveau du système :
 
 - l'**écran de pause** s'affiche en plein écran sur **chaque moniteur**, par‑dessus toutes les applications ;
-- le **code PIN** est vérifié dans le processus principal (empreinte PBKDF2 salée) : les fenêtres ne voient jamais l'empreinte, et après plusieurs essais ratés une attente progressive est imposée ;
-- si l'écran de pause verrouillé est fermé (Alt+F4) ou passe à l'arrière‑plan, il se rouvre et revient au premier plan ;
 - **Auto-Updater intégré** : vérification périodique et au démarrage des nouvelles versions publiées sur GitHub Releases, avec dialogue de changelog en markdown, suivi de téléchargement en direct et redémarrage automatique.
 
 ---
@@ -100,12 +98,11 @@ GitHub Actions prend ensuite le relais :
 
 ## Où sont stockées les données
 
-Dans `%APPDATA%\Pause & Salat\` :
+Dans `%APPDATA%\Pause\` :
 
 | Fichier          | Contenu                                                        |
 |------------------|----------------------------------------------------------------|
-| `state.json`     | journée en cours, réglages, horaires du jour, code PIN défini, date de vérif màj |
-| `secrets.json`   | sel + empreinte PBKDF2 du code PIN (jamais l'écran, jamais le code) |
+| `state.json`     | journée en cours, réglages, horaires du jour, date de vérif màj |
 | `history.sqlite` | historique des journées (base SQLite sql.js)                   |
 
 ---
@@ -122,10 +119,9 @@ Dans `%APPDATA%\Pause & Salat\` :
 │   │   ├── main.ts        # Point d'entrée Electron, fenêtres, systray, IPC
 │   │   ├── updater.ts     # Moteur Auto-Updater GitHub Releases (téléchargement, progression, semver)
 │   │   ├── store.ts       # Stockage clé/valeur persistant atomique
-│   │   ├── pin.ts         # Vérification PBKDF2 et temporisation du code PIN
 │   │   ├── history.ts     # Base SQLite (sql.js) pour l'historique des journées
 │   │   ├── exporter.ts    # Génération des exports Excel (.xlsx) et CSV (.csv)
-│   │   ├── preload.ts     # Pont IPC exposant chrome, psPin, psHistory, psSystem, psUpdater
+│   │   ├── preload.ts     # Pont IPC exposant chrome, psHistory, psSystem, psUpdater
 │   │   ├── shared.ts      # Injection des règles partagées dans l'environnement global
 │   │   └── types.ts       # Définitions d'interfaces et types TypeScript
 │   ├── shared/            # Règles de calcul partagées (salat-core, day-core, salat-card)

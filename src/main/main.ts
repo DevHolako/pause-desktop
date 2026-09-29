@@ -1,13 +1,12 @@
-// Processus principal Pause & Salat (Windows).
+// Processus principal Pause (Windows).
 // Rôles : fenêtre principale + icône de la zone de notification, fenêtres de pause
 // plein écran sur chaque écran, fenêtre de rappel de prière, récupération des horaires,
-// code PIN (vérifié ici), base d'historique SQLite (fichier), et auto-updater GitHub Releases.
+// base d'historique SQLite (fichier), et auto-updater GitHub Releases.
 
 import { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, shell, Display } from 'electron';
 import * as path from 'path';
 import './shared'; // charge salat-core, day-core, salat-card comme globales
 import { Store } from './store';
-import { PinLock } from './pin';
 import { createHistory, HistoryManager } from './history';
 import { AppUpdater } from './updater';
 import { generateXlsx, generateCsv } from './exporter';
@@ -26,8 +25,6 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let store: Store;
-let secrets: Store;
-let pinLock: PinLock;
 let history: HistoryManager;
 let updater: AppUpdater;
 
@@ -46,8 +43,6 @@ let tray: Tray | null = null;
 app.whenReady().then(() => {
     const userData = app.getPath('userData');
     store = new Store(path.join(userData, 'state.json'));
-    secrets = new Store(path.join(userData, 'secrets.json'));
-    pinLock = new PinLock(secrets, store);
     history = createHistory(path.join(userData, 'history.sqlite'), broadcastHistoryChanged);
     updater = new AppUpdater(store);
 
@@ -317,10 +312,6 @@ function dispatchAlert(): void {
 
 // ---------------------------------------------------------------- Écrans de pause plein écran
 
-function pauseLocked(): boolean {
-    return Boolean(store.value('isPaused')) && pinLock.isSet();
-}
-
 function openPauseWindowOn(display: Display): BrowserWindow {
     const b = display.bounds;
     const win = new BrowserWindow({
@@ -347,16 +338,9 @@ function openPauseWindowOn(display: Display): BrowserWindow {
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.loadFile(path.join(RENDERER, 'pause.html'));
 
-    win.on('close', (e) => {
-        if (!quitting && pauseLocked()) {
-            e.preventDefault();
-            dispatchPauseScreens();
-        }
-    });
-    win.on('blur', () => {
-        if (pauseLocked() && !win.isDestroyed()) {
-            win.setAlwaysOnTop(true, 'screen-saver');
-            win.focus();
+    win.on('close', () => {
+        if (!quitting && Boolean(store.value('isPaused'))) {
+            endPauseNow();
         }
     });
     win.on('leave-full-screen', () => {
@@ -399,9 +383,7 @@ function dispatchPauseScreens(): void {
 }
 
 /** Termine la pause en cours, l'enregistre dans l'historique */
-async function endPauseNow(pin?: string | number): Promise<any> {
-    const verdict = pinLock.check(pin);
-    if (!verdict.ok) return verdict;
+async function endPauseNow(): Promise<any> {
     if (!Boolean(store.value('isPaused'))) return { ok: true };
 
     global.applyDayRulesConfig(store.value(global.DAY_RULES_KEY));
@@ -498,11 +480,6 @@ function registerIpc(): void {
         return reg === null ? enabled : reg;
     });
 
-    ipcMain.handle('pin:isSet', () => pinLock.isSet());
-    ipcMain.handle('pin:check', (_e, pin) => pinLock.check(pin));
-    ipcMain.handle('pin:set', (_e, { current, next }) => pinLock.set(current, next));
-    ipcMain.handle('pin:remove', (_e, current) => pinLock.remove(current));
-
     ipcMain.handle('history:listDays', (_e, opts) => history.listDays(opts || {}));
     ipcMain.handle('history:exportFile', () => history.exportFile());
     ipcMain.handle('history:exportXlsx', async (_e, opts) => {
@@ -518,7 +495,7 @@ function registerIpc(): void {
 function handleMessage(msg: any): Promise<any> {
     switch (msg && msg.type) {
         case 'salat:ensure': return ensureSalatDay(Boolean(msg.force));
-        case 'pause:stop': return endPauseNow(msg.pin);
+        case 'pause:stop': return endPauseNow();
         case 'history:saveDay': return history.saveDay(msg.day);
         case 'history:deleteDay': return history.deleteDay(msg.date);
         default: return Promise.resolve(null);

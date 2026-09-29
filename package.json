@@ -2,7 +2,7 @@
   "name": "pause-salat-desktop",
   "productName": "Pause",
   "version": "1.0.0",
-  "description": "Suivez votre journée de 8 h, vos pauses et les horaires de prière. Version Windows avec écran de pause verrouillé par code PIN.",
+  "description": "Suivez votre journée de travail, vos pauses et les horaires de prière. Application de bureau Windows avec auto-updater GitHub Releases.",
   "main": "dist/main/main.js",
   "author": "Weshore",
   "private": true,
