@@ -240,7 +240,7 @@ async function load() {
         daysEl.replaceChildren();
         summaryEl.replaceChildren();
         showStatus(HistoryDb.isWasmBlocked(err)
-            ? "L'historique ne peut pas s'ouvrir tant que l'extension n'est pas rechargée. Ouvrez chrome://extensions, cliquez sur ↻ sous « Pause & Salat », puis revenez ici."
+            ? "L'historique ne peut pas s'ouvrir tant que l'extension n'est pas rechargée. Ouvrez chrome://extensions, cliquez sur ↻ sous « Pause », puis revenez ici."
             : `L'historique n'a pas pu être lu (${String(err && (err.message || err)).slice(0, 120)}). Cliquez sur « Réessayer ». Vos données ne sont pas effacées.`, true, true);
     }
 }

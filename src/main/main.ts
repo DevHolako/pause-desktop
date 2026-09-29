@@ -91,7 +91,7 @@ function createMainWindow(): void {
         minWidth: 420,
         minHeight: 600,
         show: false,
-        title: 'Pause & Salat',
+        title: 'Pause',
         icon: path.join(ROOT_DIR, 'build', 'icon.png'),
         autoHideMenuBar: true,
         backgroundColor: '#f1f2f7',
@@ -131,7 +131,7 @@ function createTray(): void {
     const fallbackPath = path.join(RENDERER, 'icon.png');
     const img = nativeImage.createFromPath(iconPath);
     tray = new Tray(img.isEmpty() ? nativeImage.createFromPath(fallbackPath) : img);
-    tray.setToolTip('Pause & Salat');
+    tray.setToolTip('Pause');
 
     const menu = Menu.buildFromTemplate([
         { label: 'Ouvrir', click: showMainWindow },
@@ -199,7 +199,7 @@ function openSettingsWindow(): void {
     settingsWindow = new BrowserWindow({
         width: 840,
         height: 780,
-        title: 'Réglages — Pause & Salat',
+        title: 'Réglages — Pause',
         icon: path.join(ROOT_DIR, 'build', 'icon.png'),
         autoHideMenuBar: true,
         backgroundColor: '#f1f2f7',
