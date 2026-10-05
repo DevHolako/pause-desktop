@@ -1,10 +1,10 @@
 {
   "name": "pause-salat-desktop",
   "productName": "Pause",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Suivez votre journée de travail, vos pauses et les horaires de prière. Application de bureau Windows avec auto-updater GitHub Releases.",
   "main": "dist/main/main.js",
-  "author": "Weshore",
+  "author": "DevHolako",
   "private": true,
   "repository": {
     "type": "git",
@@ -31,7 +31,7 @@
     "typescript": "^7.0.2"
   },
   "build": {
-    "appId": "com.weshore.pause-salat",
+    "appId": "com.devholako.pause-salat",
     "productName": "Pause",
     "publish": {
       "provider": "github",
