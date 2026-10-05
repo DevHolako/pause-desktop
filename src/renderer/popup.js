@@ -9,6 +9,8 @@ let isRamadanMode = false;
 let workDate = null;          // Journée (YYYY-MM-DD) à laquelle appartiennent les données
 let salatDay = null;          // { date, times } fourni par le service worker
 let salatError = null;
+let fullscreenPause = true;
+let quickPauseFeedbackTimer = null;
 
 const DAY_KEYS = ['clockIn', 'pauses', 'isPaused', 'pauseStartTime', 'workDate'];
 // DEFAULT_CLOCK_IN, MAX_PAUSES, DAY_RULES, pauseMins() et computeDay() : day-core.js
@@ -32,6 +34,14 @@ const salatCountdown = document.getElementById('salatCountdown');
 const salatSection = document.querySelector('.salat');
 const timerRow = document.getElementById('timerRow');
 const salatRetryBtn = document.getElementById('salatRetry');
+const fullscreenToggleBtn = document.getElementById('fullscreenToggleBtn');
+const quickPauseChips = document.querySelectorAll('#quickPauseChips .quick-chip[data-mins]');
+const customPauseBtn = document.getElementById('customPauseBtn');
+const customPauseForm = document.getElementById('customPauseForm');
+const customMinsInput = document.getElementById('customMinsInput');
+const cancelCustomPauseBtn = document.getElementById('cancelCustomPauseBtn');
+const quickPauseFeedback = document.getElementById('quickPauseFeedback');
+const addManualPauseBtn = document.getElementById('addManualPauseBtn');
 const reminderPicker = createReminderPicker({
     trigger: document.getElementById('reminderTrigger'),
     label: document.getElementById('reminderLabel'),
@@ -42,7 +52,7 @@ const reminderPicker = createReminderPicker({
 const historyStatus = document.getElementById('historyStatus');
 
 // --- INITIALISATION ---
-chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError', 'salatAlertLead', DAY_RULES_KEY], async (res) => {
+chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError', 'salatAlertLead', DAY_RULES_KEY, 'fullscreenPause'], async (res) => {
     isRamadanMode = res.isRamadanMode || false;
     applyDayRulesConfig(res[DAY_RULES_KEY]); // règles configurées (ou défauts) avant tout calcul
     salatDay = res.salatDay || null;
@@ -59,6 +69,8 @@ chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError'
     }
 
     ramadanToggle.checked = isRamadanMode;
+    fullscreenPause = res.fullscreenPause !== false;
+    updateFullscreenToggleUI();
     // Pas encore de réglage enregistré → même valeur par défaut que les onglets (10 min)
     reminderPicker.setValue(res.salatAlertLead === undefined ? DEFAULT_ALERT_LEAD_MINS : res.salatAlertLead);
 
@@ -94,6 +106,10 @@ chrome.storage.onChanged.addListener((changes) => {
         applyDayRulesConfig(changes[DAY_RULES_KEY].newValue);
         applyModeStyles();
         updateUI();
+    }
+    if (changes.fullscreenPause !== undefined) {
+        fullscreenPause = changes.fullscreenPause.newValue !== false;
+        updateFullscreenToggleUI();
     }
     if (changes.salatDay) salatDay = changes.salatDay.newValue || null;
     if (changes.salatError) salatError = changes.salatError.newValue || null;
@@ -160,6 +176,142 @@ pauseActionBtn.addEventListener('click', async () => {
     saveData();
     updateUI();
 });
+
+// --- MODE PLEIN ÉCRAN ---
+
+function updateFullscreenToggleUI() {
+    if (!fullscreenToggleBtn) return;
+    fullscreenToggleBtn.dataset.active = String(fullscreenPause);
+    const fsOn = fullscreenToggleBtn.querySelector('.fs-icon--on');
+    const fsOff = fullscreenToggleBtn.querySelector('.fs-icon--off');
+    if (fsOn) fsOn.style.display = fullscreenPause ? 'block' : 'none';
+    if (fsOff) fsOff.style.display = fullscreenPause ? 'none' : 'block';
+    fullscreenToggleBtn.title = fullscreenPause
+        ? "Plein écran activé pour les pauses (cliquer pour désactiver)"
+        : "Plein écran désactivé (mode fenêtre uniquement, cliquer pour activer)";
+    fullscreenToggleBtn.classList.toggle('is-disabled', !fullscreenPause);
+}
+
+if (fullscreenToggleBtn) {
+    fullscreenToggleBtn.addEventListener('click', () => {
+        fullscreenPause = !fullscreenPause;
+        chrome.storage.local.set({ fullscreenPause });
+        updateFullscreenToggleUI();
+    });
+}
+
+// --- AJOUT RAPIDE DE PAUSE (SANS PLEIN ÉCRAN) ---
+
+function showQuickFeedback(text, isError = false) {
+    if (!quickPauseFeedback) return;
+    quickPauseFeedback.textContent = text;
+    quickPauseFeedback.classList.toggle('is-error', isError);
+    quickPauseFeedback.classList.add('is-visible');
+    clearTimeout(quickPauseFeedbackTimer);
+    quickPauseFeedbackTimer = setTimeout(() => {
+        quickPauseFeedback.classList.remove('is-visible');
+    }, 2500);
+}
+
+function addQuickPauseMins(mins) {
+    if (isPaused) {
+        showQuickFeedback("Terminez la pause en cours d'abord", true);
+        return;
+    }
+    if (pauses.length >= MAX_PAUSES) {
+        showQuickFeedback(`Limite de pauses atteinte (${MAX_PAUSES} max)`, true);
+        return;
+    }
+    if (!Number.isFinite(mins) || mins <= 0) {
+        showQuickFeedback("Durée invalide", true);
+        return;
+    }
+
+    const nowSecs = moroccoNowSecs();
+    const endMins = Math.floor(nowSecs / 60);
+    let startMins = endMins - mins;
+    if (startMins < 0) startMins += 1440;
+
+    const startStr = minsToHM(startMins);
+    const endStr = minsToHM(endMins);
+
+    pauses.push({ start: startStr, end: endStr });
+    pauses.sort((a, b) => timeToMins(a.start) - timeToMins(b.start));
+
+    renderHistory();
+    saveData();
+    updateUI();
+    showQuickFeedback(`✓ +${mins} min ajoutée`);
+}
+
+quickPauseChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+        const mins = parseInt(chip.dataset.mins, 10);
+        if (mins) addQuickPauseMins(mins);
+    });
+});
+
+if (customPauseBtn) {
+    customPauseBtn.addEventListener('click', () => {
+        customPauseForm.hidden = !customPauseForm.hidden;
+        if (!customPauseForm.hidden) {
+            customMinsInput.focus();
+        }
+    });
+}
+
+if (cancelCustomPauseBtn) {
+    cancelCustomPauseBtn.addEventListener('click', () => {
+        customPauseForm.hidden = true;
+    });
+}
+
+if (customPauseForm) {
+    customPauseForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const val = parseInt(customMinsInput.value, 10);
+        if (!val || val <= 0) {
+            showQuickFeedback("Indiquez une durée valide en minutes", true);
+            return;
+        }
+        addQuickPauseMins(val);
+        customMinsInput.value = '';
+        customPauseForm.hidden = true;
+    });
+}
+
+if (addManualPauseBtn) {
+    addManualPauseBtn.addEventListener('click', () => {
+        if (isPaused) {
+            showQuickFeedback("Terminez la pause en cours d'abord", true);
+            return;
+        }
+        if (pauses.length >= MAX_PAUSES) {
+            showQuickFeedback(`Limite de pauses atteinte (${MAX_PAUSES} max)`, true);
+            return;
+        }
+        const endMins = Math.floor(moroccoNowSecs() / 60);
+        const startMins = Math.max(0, endMins - 15);
+        pauses.push({ start: minsToHM(startMins), end: minsToHM(endMins) });
+        pauses.sort((a, b) => timeToMins(a.start) - timeToMins(b.start));
+
+        renderHistory();
+        saveData();
+        updateUI();
+
+        // Focus sur le champ de début de la pause ajoutée
+        const rows = pausesList.querySelectorAll('.pause-row');
+        if (rows.length > 0) {
+            const lastRow = rows[rows.length - 1];
+            const startInput = lastRow.querySelector('.p-start');
+            if (startInput) {
+                startInput.focus();
+                startInput.select();
+            }
+        }
+        showQuickFeedback("✓ Pause ajoutée dans la liste");
+    });
+}
 
 document.getElementById('historyBtn').addEventListener('click', () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('history.html') });
@@ -297,6 +449,12 @@ function updateUI() {
     timerDisplay.innerText = diffSecs <= 0
         ? "00:00:00"
         : `${pad2(Math.floor(diffSecs / 3600))}:${pad2(Math.floor((diffSecs % 3600) / 60))}:${pad2(diffSecs % 60)}`;
+
+    // Contrôles d'ajout rapide (désactivés pendant une pause en direct)
+    quickPauseChips.forEach((btn) => { btn.disabled = isPaused; });
+    if (customPauseBtn) customPauseBtn.disabled = isPaused;
+    if (addManualPauseBtn) addManualPauseBtn.disabled = isPaused;
+    if (isPaused && customPauseForm && !customPauseForm.hidden) customPauseForm.hidden = true;
 }
 
 // --- HISTORIQUE (SQLite, via le service worker) ---

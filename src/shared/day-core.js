@@ -4,7 +4,7 @@
 // Dépend de salat-core.js (timeToMins).
 
 var DEFAULT_CLOCK_IN = '08:00';
-var MAX_PAUSES = 10;
+var MAX_PAUSES = 30;
 
 // Règles par défaut (minutes depuis minuit) :
 //   workMins     : durée de travail effectif

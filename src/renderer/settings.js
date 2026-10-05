@@ -111,6 +111,17 @@ if (window.psSystem && startupSection) {
     });
 }
 
+// Mode plein écran pour les pauses
+const fullscreenPauseToggle = document.getElementById('fullscreenPauseToggle');
+if (fullscreenPauseToggle) {
+    chrome.storage.local.get('fullscreenPause', (res) => {
+        fullscreenPauseToggle.checked = res.fullscreenPause !== false;
+    });
+    fullscreenPauseToggle.addEventListener('change', () => {
+        chrome.storage.local.set({ fullscreenPause: fullscreenPauseToggle.checked }, showSaved);
+    });
+}
+
 // Chargement initial
 chrome.storage.local.get(DAY_RULES_KEY, (res) => fillForm(res[DAY_RULES_KEY]));
 

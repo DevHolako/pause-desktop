@@ -140,6 +140,16 @@ function createTray(): void {
 
     const menu = Menu.buildFromTemplate([
         { label: 'Ouvrir', click: showMainWindow },
+        {
+            label: 'Pause rapide (+)',
+            submenu: [
+                { label: '+5 min', click: () => { addQuickPause(5); } },
+                { label: '+10 min', click: () => { addQuickPause(10); } },
+                { label: '+15 min', click: () => { addQuickPause(15); } },
+                { label: '+30 min', click: () => { addQuickPause(30); } }
+            ]
+        },
+        { type: 'separator' },
         { label: 'Historique', click: openHistoryWindow },
         { label: 'Réglages', click: openSettingsWindow },
         { type: 'separator' },
@@ -368,12 +378,13 @@ function openPauseWindowOn(display: Display): BrowserWindow {
 
 function dispatchPauseScreens(): void {
     const isPaused = Boolean(store.value('isPaused'));
+    const isFullscreen = store.value('fullscreenPause') !== false;
 
     for (const [id, win] of [...pauseWindows]) {
         if (win.isDestroyed()) pauseWindows.delete(id);
     }
 
-    if (!isPaused) {
+    if (!isPaused || !isFullscreen) {
         for (const [id, win] of [...pauseWindows]) {
             win.destroy();
             pauseWindows.delete(id);
@@ -416,6 +427,30 @@ async function endPauseNow(): Promise<any> {
         }
     }
     return { ok: true };
+}
+
+/** Ajoute directement une pause de N minutes sans activer le mode plein écran */
+async function addQuickPause(mins: number): Promise<any> {
+    if (!Number.isFinite(mins) || mins <= 0) return { ok: false, error: 'Durée invalide' };
+
+    global.applyDayRulesConfig(store.value(global.DAY_RULES_KEY));
+    const s = store.get(['pauses', 'clockIn', 'workDate', 'isRamadanMode']);
+    const nowTs = Date.now();
+    const startTs = nowTs - mins * 60 * 1000;
+    const today = global.moroccoDateKey();
+    const workDate = s.workDate || today;
+    const clockIn = s.clockIn || global.DEFAULT_CLOCK_IN;
+    const ramadan = Boolean(s.isRamadanMode);
+
+    const pauses = global.recordPause(s.pauses, startTs, nowTs);
+    store.set({ pauses, workDate, clockIn });
+
+    const { departureMins } = global.computeDay({ clockIn, dayPauses: pauses, activeSecs: 0, ramadan });
+    await history.saveDay({ date: workDate, clockIn, ramadan, departure: global.minsToHM(departureMins), pauses });
+    if (syncManager && syncManager.getConfig().enabled && syncManager.getConfig().autoSync) {
+        syncManager.sync().catch(() => {});
+    }
+    return { ok: true, pauses };
 }
 
 // ---------------------------------------------------------------- Démarrage automatique
@@ -469,12 +504,12 @@ function onStoreChanged(changes: StoreChanges): void {
     }
 
     if (changes[global.DAY_RULES_KEY]) global.applyDayRulesConfig(store.value(global.DAY_RULES_KEY));
-    if (changes.isPaused) dispatchPauseScreens();
+    if (changes.isPaused !== undefined || changes.fullscreenPause !== undefined) dispatchPauseScreens();
     if (changes.salatDay || changes.salatAlertLead) scheduleAlert();
     if (changes.salatDay || changes.salatAlertLead || changes.salatDismissedKey) dispatchAlert();
 
     // Enregistrement d'un timestamp de modification de config pour la synchronisation
-    if (changes[global.DAY_RULES_KEY] || changes.isRamadanMode || changes.salatAlertLead || changes.autoLaunch) {
+    if (changes[global.DAY_RULES_KEY] || changes.isRamadanMode || changes.salatAlertLead || changes.autoLaunch || changes.fullscreenPause !== undefined) {
         store.set({ syncConfigUpdatedAt: Date.now() });
         if (syncManager && syncManager.getConfig().enabled && syncManager.getConfig().autoSync) {
             setTimeout(() => syncManager.sync().catch(() => {}), 3000);
@@ -539,6 +574,7 @@ function handleMessage(msg: any): Promise<any> {
     switch (msg && msg.type) {
         case 'salat:ensure': return ensureSalatDay(Boolean(msg.force));
         case 'pause:stop': return endPauseNow();
+        case 'pause:quickAdd': return addQuickPause(Number(msg.mins));
         case 'history:saveDay': return history.saveDay(msg.day);
         case 'history:deleteDay': return history.deleteDay(msg.date);
         default: return Promise.resolve(null);

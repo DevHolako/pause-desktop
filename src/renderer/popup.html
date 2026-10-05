@@ -99,13 +99,53 @@
                         <span class="field-label"><span class="live-dot" aria-hidden="true"></span>Pause en cours</span>
                         <div id="activePauseDisplay" class="timer-value">00:00:00</div>
                     </div>
-                    <button id="pauseActionBtn" class="btn-action btn-start" type="button">Démarrer la pause</button>
+                    <div class="timer-controls">
+                        <button id="fullscreenToggleBtn" class="icon-toggle-btn" type="button" title="Plein écran activé pour les pauses (cliquer pour désactiver)" aria-label="Mode plein écran pour les pauses" data-active="true">
+                            <svg class="fs-icon fs-icon--on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                            </svg>
+                            <svg class="fs-icon fs-icon--off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                            </svg>
+                        </button>
+                        <button id="pauseActionBtn" class="btn-action btn-start" type="button">Démarrer la pause</button>
+                    </div>
+                </div>
+
+                <!-- AJOUT RAPIDE DE PAUSE SANS PLEIN ÉCRAN -->
+                <div class="quick-pause-card" id="quickPauseCard">
+                    <div class="quick-pause-header">
+                        <span class="quick-pause-title">Ajout rapide de pause</span>
+                        <span id="quickPauseFeedback" class="quick-pause-feedback" aria-live="polite"></span>
+                    </div>
+                    <div class="quick-pause-chips" id="quickPauseChips">
+                        <button type="button" class="quick-chip" data-mins="5" title="Ajouter une pause de 5 minutes">+5 min</button>
+                        <button type="button" class="quick-chip" data-mins="10" title="Ajouter une pause de 10 minutes">+10 min</button>
+                        <button type="button" class="quick-chip" data-mins="15" title="Ajouter une pause de 15 minutes">+15 min</button>
+                        <button type="button" class="quick-chip" data-mins="30" title="Ajouter une pause de 30 minutes">+30 min</button>
+                        <button type="button" class="quick-chip quick-chip--custom" id="customPauseBtn" title="Ajouter une durée personnalisée">+ Autre...</button>
+                    </div>
+                    <form class="custom-pause-form" id="customPauseForm" hidden novalidate>
+                        <label for="customMinsInput" class="custom-pause-label">Durée en min :</label>
+                        <input type="number" id="customMinsInput" class="custom-mins-input" min="1" max="180" placeholder="ex. 20" aria-label="Durée de la pause en minutes">
+                        <button type="submit" id="confirmCustomPauseBtn" class="btn-custom-confirm">Ajouter</button>
+                        <button type="button" id="cancelCustomPauseBtn" class="btn-custom-cancel" title="Annuler" aria-label="Annuler">×</button>
+                    </form>
                 </div>
 
                 <div class="history">
                     <div class="history-header">
                         <h3 class="history-title">Pauses du jour</h3>
-                        <div id="totalPauseMins" class="history-total">Total: 0h 00m</div>
+                        <div class="history-header-actions">
+                            <div id="totalPauseMins" class="history-total">Total: 0h 00m</div>
+                            <button type="button" id="addManualPauseBtn" class="btn-add-pause" title="Ajouter une ligne de pause manuellement" aria-label="Ajouter une pause manuellement">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                <span>Ajouter</span>
+                            </button>
+                        </div>
                     </div>
                     <div id="pausesList" class="pauses-list"></div>
                 </div>

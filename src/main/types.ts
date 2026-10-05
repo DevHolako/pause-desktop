@@ -59,6 +59,7 @@ export interface StoreValues {
     lastUpdateCheck?: number;
     syncConfig?: SyncConfig;
     syncConfigUpdatedAt?: number;
+    fullscreenPause?: boolean;
     [key: string]: any;
 }
 
