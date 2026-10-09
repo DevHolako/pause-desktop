@@ -14,8 +14,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --win nsis",
-    "dist:portable": "npm run build && electron-builder --win portable",
+    "dist": "npm run build && electron-builder --win nsis --publish never",
+    "dist:portable": "npm run build && electron-builder --win portable --publish never",
     "release": "npm run build && electron-builder --win nsis --publish always"
   },
   "dependencies": {
