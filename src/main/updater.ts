@@ -445,6 +445,12 @@ export class AppUpdater {
 
     /** Quitte et installe la mise à jour */
     public installUpdate(): void {
+        for (const win of BrowserWindow.getAllWindows()) {
+            if (!win.isDestroyed()) {
+                win.removeAllListeners('close');
+            }
+        }
+
         if (this.downloadedFilePath && fs.existsSync(this.downloadedFilePath)) {
             try {
                 const child = spawn(this.downloadedFilePath, [], {
