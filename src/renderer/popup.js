@@ -42,6 +42,31 @@ const customMinsInput = document.getElementById('customMinsInput');
 const cancelCustomPauseBtn = document.getElementById('cancelCustomPauseBtn');
 const quickPauseFeedback = document.getElementById('quickPauseFeedback');
 const addManualPauseBtn = document.getElementById('addManualPauseBtn');
+const simExistingBadge = document.getElementById('simExistingBadge');
+const simTabDuration = document.getElementById('simTabDuration');
+const simTabTarget = document.getElementById('simTabTarget');
+const simPanelDuration = document.getElementById('simPanelDuration');
+const simPanelTarget = document.getElementById('simPanelTarget');
+const simPauseMinsInput = document.getElementById('simPauseMins');
+const simDurationChips = document.querySelectorAll('#simDurationChips .sim-chip[data-sim-mins]');
+const simMaxAvailBtn = document.getElementById('simMaxAvailBtn');
+const simOutTime = document.getElementById('simOutTime');
+const simResumeNote = document.getElementById('simResumeNote');
+const simRemainingBudget = document.getElementById('simRemainingBudget');
+const simTotalPauseNote = document.getElementById('simTotalPauseNote');
+const simDurationStatus = document.getElementById('simDurationStatus');
+const simTargetTimeInput = document.getElementById('simTargetTime');
+const simPresetMinBtn = document.getElementById('simPresetMinBtn');
+const simPresetMidBtn = document.getElementById('simPresetMidBtn');
+const simPresetMaxBtn = document.getElementById('simPresetMaxBtn');
+const simAvailForTarget = document.getElementById('simAvailForTarget');
+const simAvailSubNote = document.getElementById('simAvailSubNote');
+const simEffectiveAvail = document.getElementById('simEffectiveAvail');
+const simCurrentOutNote = document.getElementById('simCurrentOutNote');
+const simTargetStatus = document.getElementById('simTargetStatus');
+let simActiveTargetPreset = 'mid';
+let simUseMaxAvail = false;
+
 const reminderPicker = createReminderPicker({
     trigger: document.getElementById('reminderTrigger'),
     label: document.getElementById('reminderLabel'),
@@ -329,12 +354,141 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
     chrome.storage.local.remove(DAY_KEYS, () => location.reload());
 });
 
+// --- SIMULATEUR PAUSE & SORTIE ---
+
+function setSimMode(mode) {
+    const isDuration = mode !== 'target';
+    if (simTabDuration && simTabTarget) {
+        simTabDuration.classList.toggle('is-active', isDuration);
+        simTabDuration.setAttribute('aria-selected', String(isDuration));
+        simTabTarget.classList.toggle('is-active', !isDuration);
+        simTabTarget.setAttribute('aria-selected', String(!isDuration));
+    }
+    if (simPanelDuration) simPanelDuration.hidden = !isDuration;
+    if (simPanelTarget) simPanelTarget.hidden = isDuration;
+    updateUI();
+}
+
+if (simTabDuration && simTabTarget) {
+    simTabDuration.addEventListener('click', () => setSimMode('duration'));
+    simTabTarget.addEventListener('click', () => setSimMode('target'));
+}
+
+function updateSimDurationChipSelection(val, isMaxPreset = false) {
+    simDurationChips.forEach((chip) => {
+        const chipMins = parseInt(chip.dataset.simMins, 10);
+        chip.classList.toggle('is-selected', !isMaxPreset && chipMins === val);
+    });
+    if (simMaxAvailBtn) {
+        simMaxAvailBtn.classList.toggle('is-selected', isMaxPreset);
+    }
+}
+
+if (simPauseMinsInput) {
+    simPauseMinsInput.addEventListener('input', () => {
+        simUseMaxAvail = false;
+        const val = parseInt(simPauseMinsInput.value, 10);
+        updateSimDurationChipSelection(val, false);
+        updateUI();
+    });
+}
+
+simDurationChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+        const mins = parseInt(chip.dataset.simMins, 10);
+        if (Number.isFinite(mins)) {
+            simUseMaxAvail = false;
+            simPauseMinsInput.value = String(mins);
+            updateSimDurationChipSelection(mins, false);
+            updateUI();
+        }
+    });
+});
+
+if (simMaxAvailBtn) {
+    simMaxAvailBtn.addEventListener('click', () => {
+        simUseMaxAvail = true;
+        const activeSecs = isPaused && pauseStartTime ? Math.floor((Date.now() - pauseStartTime) / 1000) : 0;
+        const day = computeDay({ clockIn: clockInInput.value, dayPauses: pauses, activeSecs, ramadan: isRamadanMode });
+        const maxAvail = Math.max(0, Math.floor(day.remainingBreakMins));
+        simPauseMinsInput.value = String(maxAvail);
+        updateSimDurationChipSelection(maxAvail, true);
+        updateUI();
+    });
+}
+
+function getTargetPresetMins(preset, rules) {
+    const minOut = rules.minOut;
+    const maxOut = rules.maxOut != null ? rules.maxOut : minOut + 60;
+    if (preset === 'min') return minOut;
+    if (preset === 'max') return maxOut;
+    return Math.round((minOut + maxOut) / 2);
+}
+
+function updateSimTargetChipSelection(preset) {
+    [
+        [simPresetMinBtn, 'min'],
+        [simPresetMidBtn, 'mid'],
+        [simPresetMaxBtn, 'max']
+    ].forEach(([btn, key]) => {
+        if (btn) btn.classList.toggle('is-selected', preset === key);
+    });
+}
+
+function syncSimTargetPresets() {
+    const rules = dayRules(isRamadanMode);
+    const minHM = minsToHM(getTargetPresetMins('min', rules));
+    const midHM = minsToHM(getTargetPresetMins('mid', rules));
+    const maxHM = minsToHM(getTargetPresetMins('max', rules));
+    if (simPresetMinBtn) simPresetMinBtn.textContent = `Au plus tôt (${minHM})`;
+    if (simPresetMidBtn) simPresetMidBtn.textContent = `Milieu (${midHM})`;
+    if (simPresetMaxBtn) simPresetMaxBtn.textContent = `Au plus tard (${maxHM})`;
+
+    if (simActiveTargetPreset && simTargetTimeInput) {
+        simTargetTimeInput.value = minsToHM(getTargetPresetMins(simActiveTargetPreset, rules));
+    }
+}
+
+[
+    [simPresetMinBtn, 'min'],
+    [simPresetMidBtn, 'mid'],
+    [simPresetMaxBtn, 'max']
+].forEach(([btn, key]) => {
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        simActiveTargetPreset = key;
+        const rules = dayRules(isRamadanMode);
+        simTargetTimeInput.value = minsToHM(getTargetPresetMins(key, rules));
+        updateSimTargetChipSelection(key);
+        updateUI();
+    });
+});
+
+if (simTargetTimeInput) {
+    simTargetTimeInput.addEventListener('input', () => {
+        const rules = dayRules(isRamadanMode);
+        const currentMins = timeToMins(simTargetTimeInput.value);
+        let matched = null;
+        for (const key of ['min', 'mid', 'max']) {
+            if (currentMins === getTargetPresetMins(key, rules)) {
+                matched = key;
+                break;
+            }
+        }
+        simActiveTargetPreset = matched;
+        updateSimTargetChipSelection(matched);
+        updateUI();
+    });
+}
+
 // --- FONCTIONS ---
 
 function applyModeStyles() {
+    const rules = dayRules(isRamadanMode);
     appWrapper.classList.toggle('ramadan-active', isRamadanMode);
-    limitBadge.innerText = isRamadanMode ? "Entre 15:30 et 16:30" : "Entre 17:00 et 18:00";
-    availLabel.innerText = "Pause dispo (max " + formatDuration(dayRules(isRamadanMode).maxPauseMins) + ")";
+    limitBadge.innerText = `Entre ${minsToHM(rules.minOut)} et ${minsToHM(rules.maxOut != null ? rules.maxOut : rules.minOut + 60)}`;
+    availLabel.innerText = "Pause dispo (max " + formatDuration(rules.maxPauseMins) + ")";
+    syncSimTargetPresets();
 }
 
 function formatPauseDur(p) {
@@ -422,6 +576,111 @@ function updateSalatBanner() {
         `${pad2(Math.floor(remSecs / 3600))}:${pad2(Math.floor((remSecs % 3600) / 60))}:${pad2(remSecs % 60)}`;
 }
 
+function updateSimulatorUI(activeSecs, day) {
+    if (!simExistingBadge) return;
+    const rules = dayRules(isRamadanMode);
+
+    // Si "Max dispo" est actif, suivre en direct le capital pause restant
+    if (simUseMaxAvail && simPauseMinsInput && document.activeElement !== simPauseMinsInput) {
+        const maxAvail = Math.max(0, Math.floor(day.remainingBreakMins));
+        simPauseMinsInput.value = String(maxAvail);
+    }
+
+    const extraMins = Math.max(0, parseInt(simPauseMinsInput ? simPauseMinsInput.value : '0', 10) || 0);
+    const durSim = simulatePauseDuration({
+        clockIn: clockInInput.value,
+        dayPauses: pauses,
+        activeSecs,
+        ramadan: isRamadanMode,
+        extraPauseMins: extraMins
+    });
+
+    simExistingBadge.textContent = `Déjà pris : ${formatDuration(durSim.existingPauseMins)}${isPaused ? ' (en cours)' : ''}`;
+
+    // --- Mode 1 : Pause -> Heure de sortie ---
+    if (simOutTime) {
+        simOutTime.textContent = minsToHM(durSim.departureMins);
+        simOutTime.classList.toggle('is-warn', durSim.exceedsMaxOutMins > 0);
+    }
+    if (simResumeNote) {
+        const nowMins = Math.floor(moroccoNowSecs() / 60);
+        simResumeNote.textContent = extraMins > 0
+            ? `Fin de pause si lancée : ${minsToHM(nowMins + extraMins)}`
+            : `Aucune pause simulée`;
+    }
+    if (simRemainingBudget) {
+        if (durSim.remainingBreakMins >= 0) {
+            simRemainingBudget.textContent = formatDuration(durSim.remainingBreakMins);
+            simRemainingBudget.classList.remove('is-warn');
+        } else {
+            simRemainingBudget.textContent = `-${formatDuration(Math.abs(durSim.remainingBreakMins))}`;
+            simRemainingBudget.classList.add('is-warn');
+        }
+    }
+    if (simTotalPauseNote) {
+        simTotalPauseNote.textContent = `Cumul : ${formatDuration(durSim.totalPauseMins)} (${formatDuration(durSim.existingPauseMins)} + ${formatDuration(extraMins)})`;
+    }
+    if (simDurationStatus) {
+        if (durSim.exceedsMaxOutMins > 0) {
+            simDurationStatus.classList.add('is-warn');
+            simDurationStatus.textContent = `⚠️ Dépasse la sortie max (${minsToHM(rules.maxOut)}) de ${formatDuration(durSim.exceedsMaxOutMins)} — sortie théorique à ${minsToHM(durSim.rawDepartureMins)}.`;
+        } else if (durSim.exceedsBudgetMins > 0) {
+            simDurationStatus.classList.add('is-warn');
+            simDurationStatus.textContent = `⚠️ Dépasse le forfait pause (${formatDuration(rules.maxPauseMins)}) de ${formatDuration(durSim.exceedsBudgetMins)} — sortie à ${minsToHM(durSim.departureMins)}.`;
+        } else {
+            simDurationStatus.classList.remove('is-warn');
+            const shiftMins = durSim.departureMins - durSim.currentDepartureMins;
+            simDurationStatus.textContent = shiftMins > 0
+                ? `✓ Avec +${formatDuration(extraMins)} de pause (en plus des ${formatDuration(durSim.existingPauseMins)} prises), sortie à ${minsToHM(durSim.departureMins)} (+${formatDuration(shiftMins)}).`
+                : `✓ Avec +${formatDuration(extraMins)} de pause, votre sortie reste à ${minsToHM(durSim.departureMins)}.`;
+        }
+    }
+
+    // --- Mode 2 : Sortie cible -> Pause disponible ---
+    const parsedTarget = simTargetTimeInput ? timeToMins(simTargetTimeInput.value) : NaN;
+    const targetMins = Number.isNaN(parsedTarget) ? rules.minOut : parsedTarget;
+    const targetSim = simulateTargetDeparture({
+        clockIn: clockInInput.value,
+        dayPauses: pauses,
+        activeSecs,
+        ramadan: isRamadanMode,
+        targetOutMins: targetMins
+    });
+
+    if (simAvailForTarget) {
+        simAvailForTarget.textContent = formatDuration(targetSim.availablePauseMins);
+        simAvailForTarget.classList.toggle('is-warn', targetSim.isAlreadyPastTarget);
+    }
+    if (simAvailSubNote) {
+        simAvailSubNote.textContent = `Après déduction de ${formatDuration(targetSim.existingPauseMins)} pris`;
+    }
+    if (simEffectiveAvail) {
+        simEffectiveAvail.textContent = formatDuration(targetSim.effectiveAvailableMins);
+        simEffectiveAvail.classList.toggle('is-warn', targetSim.isAlreadyPastTarget || targetSim.budgetRemainingMins < 0);
+    }
+    if (simCurrentOutNote) {
+        simCurrentOutNote.textContent = `Sortie actuelle : ${minsToHM(targetSim.currentDepartureMins)}`;
+    }
+    if (simTargetStatus) {
+        if (targetSim.isAlreadyPastTarget) {
+            simTargetStatus.classList.add('is-warn');
+            simTargetStatus.textContent = `⚠️ Objectif dépassé de ${formatDuration(targetSim.overTargetByMins)} : avec vos ${formatDuration(targetSim.existingPauseMins)} de pause, la sortie est déjà à ${minsToHM(targetSim.baseDepartureMins)}.`;
+        } else if (targetSim.isTargetBeforeMinOut) {
+            simTargetStatus.classList.add('is-warn');
+            simTargetStatus.textContent = `⚠️ Heure visée avant la sortie min du règlement (${minsToHM(rules.minOut)}). Pause possible d'ici ${minsToHM(targetSim.targetOutMins)} : ${formatDuration(targetSim.availablePauseMins)}.`;
+        } else if (targetSim.isTargetAfterMaxOut) {
+            simTargetStatus.classList.add('is-warn');
+            simTargetStatus.textContent = `⚠️ Heure visée après la sortie max (${minsToHM(rules.maxOut)}). Forfait pause restant : ${formatDuration(Math.max(0, targetSim.budgetRemainingMins))}.`;
+        } else if (targetSim.exceedsBudgetByMins > 0) {
+            simTargetStatus.classList.remove('is-warn');
+            simTargetStatus.textContent = `✓ Il vous reste ${formatDuration(targetSim.availablePauseMins)} avant ${minsToHM(targetSim.targetOutMins)} (dont ${formatDuration(targetSim.effectiveAvailableMins)} dans le forfait max de ${formatDuration(rules.maxPauseMins)}).`;
+        } else {
+            simTargetStatus.classList.remove('is-warn');
+            simTargetStatus.textContent = `✓ Pour sortir à ${minsToHM(targetSim.targetOutMins)}, il vous reste ${formatDuration(targetSim.availablePauseMins)} de pause (compte tenu des ${formatDuration(targetSim.existingPauseMins)} déjà prises).`;
+        }
+    }
+}
+
 function updateUI() {
     updateSalatBanner();
 
@@ -455,6 +714,8 @@ function updateUI() {
     if (customPauseBtn) customPauseBtn.disabled = isPaused;
     if (addManualPauseBtn) addManualPauseBtn.disabled = isPaused;
     if (isPaused && customPauseForm && !customPauseForm.hidden) customPauseForm.hidden = true;
+
+    updateSimulatorUI(activeSecs, day);
 }
 
 // --- HISTORIQUE (SQLite, via le service worker) ---

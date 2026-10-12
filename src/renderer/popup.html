@@ -151,6 +151,88 @@
                 </div>
             </section>
 
+            <!-- SIMULATEUR PAUSE & SORTIE -->
+            <section id="simSection" class="sim-panel" aria-labelledby="simTitle">
+                <div class="sim-header">
+                    <div class="sim-title-wrap">
+                        <svg class="sim-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <polyline points="12 7 12 12 15.5 14"/>
+                        </svg>
+                        <h3 id="simTitle" class="sim-title">Simulateur</h3>
+                    </div>
+                    <span id="simExistingBadge" class="sim-existing-badge" title="Pauses déjà effectuées aujourd'hui (prises en compte dans le calcul)">Déjà pris : 0h 00m</span>
+                </div>
+
+                <div class="sim-tabs" role="tablist" aria-label="Mode de simulation">
+                    <button type="button" id="simTabDuration" class="sim-tab is-active" role="tab" aria-selected="true" aria-controls="simPanelDuration" data-sim-mode="duration">
+                        Pause → Heure de sortie
+                    </button>
+                    <button type="button" id="simTabTarget" class="sim-tab" role="tab" aria-selected="false" aria-controls="simPanelTarget" data-sim-mode="target">
+                        Sortie cible → Pause dispo
+                    </button>
+                </div>
+
+                <!-- MODE 1 : Durée de pause -> Heure de sortie -->
+                <div id="simPanelDuration" class="sim-body" role="tabpanel" aria-labelledby="simTabDuration">
+                    <div class="sim-control-row">
+                        <label for="simPauseMins" class="sim-label">Pause supplémentaire à prendre</label>
+                        <div class="sim-input-group">
+                            <input type="number" id="simPauseMins" name="simPauseMins" class="sim-number-input" min="0" max="480" step="5" value="30" inputmode="numeric">
+                            <span class="sim-unit">min</span>
+                        </div>
+                    </div>
+                    <div class="sim-chips" id="simDurationChips">
+                        <button type="button" class="sim-chip" data-sim-mins="10">+10m</button>
+                        <button type="button" class="sim-chip" data-sim-mins="15">+15m</button>
+                        <button type="button" class="sim-chip" data-sim-mins="20">+20m</button>
+                        <button type="button" class="sim-chip is-selected" data-sim-mins="30">+30m</button>
+                        <button type="button" class="sim-chip" data-sim-mins="45">+45m</button>
+                        <button type="button" class="sim-chip" data-sim-mins="60">+1h</button>
+                        <button type="button" class="sim-chip sim-chip--accent" id="simMaxAvailBtn" data-sim-preset="remaining" title="Simuler tout le capital pause restant">Max dispo</button>
+                    </div>
+                    <div class="sim-results-grid">
+                        <div class="sim-result-card">
+                            <span class="sim-result-label">Sortie simulée</span>
+                            <div id="simOutTime" class="sim-result-value sim-result-value--primary">17:30</div>
+                            <span id="simResumeNote" class="sim-result-sub">Reprise si lancée : --:--</span>
+                        </div>
+                        <div class="sim-result-card">
+                            <span class="sim-result-label">Capital restant après</span>
+                            <div id="simRemainingBudget" class="sim-result-value">0h 30m</div>
+                            <span id="simTotalPauseNote" class="sim-result-sub">Cumul pauses : 0h 30m</span>
+                        </div>
+                    </div>
+                    <div id="simDurationStatus" class="sim-status" aria-live="polite"></div>
+                </div>
+
+                <!-- MODE 2 : Heure de sortie cible -> Pause disponible -->
+                <div id="simPanelTarget" class="sim-body" role="tabpanel" aria-labelledby="simTabTarget" hidden>
+                    <div class="sim-control-row">
+                        <label for="simTargetTime" class="sim-label">Heure de sortie cible</label>
+                        <input type="time" id="simTargetTime" name="simTargetTime" class="time-input sim-time-input" value="17:30">
+                    </div>
+                    <div class="sim-chips" id="simTargetChips">
+                        <button type="button" class="sim-chip" data-target-preset="min" id="simPresetMinBtn">Au plus tôt (17:00)</button>
+                        <button type="button" class="sim-chip is-selected" data-target-preset="mid" id="simPresetMidBtn">Milieu (17:30)</button>
+                        <button type="button" class="sim-chip" data-target-preset="max" id="simPresetMaxBtn">Au plus tard (18:00)</button>
+                    </div>
+                    <div class="sim-results-grid">
+                        <div class="sim-result-card">
+                            <span class="sim-result-label">Pause encore dispo</span>
+                            <div id="simAvailForTarget" class="sim-result-value sim-result-value--primary">0h 30m</div>
+                            <span id="simAvailSubNote" class="sim-result-sub">Après déduction de 0h 00m</span>
+                        </div>
+                        <div class="sim-result-card">
+                            <span class="sim-result-label">Dans le forfait max</span>
+                            <div id="simEffectiveAvail" class="sim-result-value">0h 30m</div>
+                            <span id="simCurrentOutNote" class="sim-result-sub">Sortie actuelle : 17:00</span>
+                        </div>
+                    </div>
+                    <div id="simTargetStatus" class="sim-status" aria-live="polite"></div>
+                </div>
+            </section>
+
             <!-- RÉSULTATS -->
             <section class="summary" aria-label="Fin de journée">
                 <div class="stat">
