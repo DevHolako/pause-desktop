@@ -112,6 +112,7 @@
 
 .update-notes-body {
     color: var(--text);
+    white-space: pre-line;
 }
 
 .update-notes-body h1,

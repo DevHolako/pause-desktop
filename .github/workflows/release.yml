@@ -55,16 +55,21 @@ jobs:
         run: |
           $tags = @(git tag --sort=-creatordate)
           $prevTag = if ($tags.Count -ge 2) { $tags[1] } else { "" }
+          $commits = @()
           if ($prevTag) {
             $commits = @(git log "$prevTag..HEAD" --pretty=format:"- %s" | Where-Object { $_ -notmatch "^- chore\(release\):" })
-          } else {
-            $commits = @(git log -n 10 --pretty=format:"- %s" | Where-Object { $_ -notmatch "^- chore\(release\):" })
+          }
+          if ($commits.Count -eq 0) {
+            $commits = @(git log -n 15 --pretty=format:"- %s" | Where-Object { $_ -notmatch "^- chore\(release\):" } | Select-Object -First 5)
           }
           if ($commits.Count -eq 0) {
             $commits = @("- Améliorations et corrections diverses")
           }
-          $notes = @("## Nouveautés & corrections", "") + $commits
-          $notes -join "`n" | Set-Content -Path "CHANGELOG_RELEASE.md" -Encoding UTF8
+          $commits -join "`n" | Set-Content -Path "CHANGELOG_RELEASE.md" -Encoding UTF8
+          if (Test-Path "release/latest.yml") {
+            $indented = ($commits | ForEach-Object { "  $_" }) -join "`n"
+            Add-Content -Path "release/latest.yml" -Value "`nreleaseNotes: |-`n$indented" -Encoding UTF8
+          }
 
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
@@ -74,7 +79,7 @@ jobs:
           draft: ${{ github.event.inputs.draft == 'true' }}
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           body_path: CHANGELOG_RELEASE.md
-          generate_release_notes: true
+          generate_release_notes: false
           files: |
             release/*.exe
             release/*.blockmap

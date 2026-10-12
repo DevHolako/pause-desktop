@@ -36,6 +36,28 @@ export function semverCompare(v1: string, v2: string): number {
     return 0;
 }
 
+/** Convertit des notes de version (HTML ou Markdown) en texte brut propre */
+export function toPlainTextNotes(raw: string): string {
+    if (!raw) return '';
+    return String(raw)
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#0?39;/gi, "'")
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/<li[^>]*>/gi, '\n• ')
+        .replace(/<\/(p|div|h[1-6]|li|ul|ol|blockquote|tr)>/gi, '\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/^\s*[-*]\s+/gm, '• ')
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .join('\n');
+}
+
 export class AppUpdater {
     private store: Store;
     private status: UpdaterStatus;
@@ -66,11 +88,12 @@ export class AppUpdater {
         });
 
         autoUpdater.on('update-available', (info) => {
-            const releaseNotes = Array.isArray(info.releaseNotes)
+            const rawNotes = Array.isArray(info.releaseNotes)
                 ? info.releaseNotes.map((n) => (typeof n === 'string' ? n : n.note || '')).join('\n\n')
                 : typeof info.releaseNotes === 'string'
                 ? info.releaseNotes
                 : '';
+            const releaseNotes = toPlainTextNotes(rawNotes);
 
             const fallbackFileName = `Pause-Setup-${info.version}.exe`;
             const fileName = info.files?.[0]?.url || fallbackFileName;
@@ -238,7 +261,7 @@ export class AppUpdater {
                     version: latest,
                     releaseName: release.name || `Version ${latest}`,
                     releaseDate: release.published_at,
-                    releaseNotes: release.body,
+                    releaseNotes: toPlainTextNotes(release.body),
                     htmlUrl: release.html_url,
                     downloadUrl: exeAsset?.browser_download_url,
                     fileName: exeAsset?.name,
