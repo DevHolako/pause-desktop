@@ -52,7 +52,9 @@ function readMode(mode) {
         rules[field] = mins;
     }
     if (rules.workMins <= 0) return { error: 'La durée de travail doit être supérieure à zéro.', input: card.querySelector('[name="workMins"]') };
+    if (rules.minPauseMins < 0) return { error: 'La pause minimum ne peut pas être négative.', input: card.querySelector('[name="minPauseMins"]') };
     if (rules.maxPauseMins < 0) return { error: 'La pause maximum ne peut pas être négative.', input: card.querySelector('[name="maxPauseMins"]') };
+    if (rules.maxPauseMins < rules.minPauseMins) return { error: 'La pause maximum doit être supérieure ou égale à la pause minimum obligatoire.', input: card.querySelector('[name="maxPauseMins"]') };
     if (rules.maxOut < rules.minOut) return { error: 'La sortie au plus tard doit être postérieure (ou égale) à la sortie au plus tôt.', input: card.querySelector('[name="maxOut"]') };
     return { rules };
 }

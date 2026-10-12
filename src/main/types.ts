@@ -33,6 +33,7 @@ export interface SalatDay {
 
 export interface DayRuleModeConfig {
     workMins?: number;
+    minPauseMins?: number;
     maxPauseMins?: number;
     minOut?: number;
     maxOut?: number;
@@ -60,6 +61,7 @@ export interface StoreValues {
     syncConfig?: SyncConfig;
     syncConfigUpdatedAt?: number;
     fullscreenPause?: boolean;
+    simCollapsed?: boolean;
     [key: string]: any;
 }
 
