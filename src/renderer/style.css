@@ -1139,15 +1139,55 @@ body:has(.ramadan-active) {
     justify-content: space-between;
     align-items: center;
     gap: 8px;
+    width: 100%;
     padding: 9px 12px;
+    border: none;
     border-bottom: 1px solid var(--line);
     background: var(--surface-sunk);
+    font-family: var(--font-ui);
+    text-align: left;
+}
+
+.sim-header--toggle {
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease);
+}
+
+.sim-header--toggle:hover {
+    background: var(--field-bg);
+}
+
+.sim-header--toggle[aria-expanded="false"] {
+    border-bottom-color: transparent;
 }
 
 .sim-title-wrap {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.sim-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sim-chevron {
+    color: var(--muted);
+    transition: transform 0.25s var(--ease), color 0.2s var(--ease);
+}
+
+.sim-header--toggle:hover .sim-chevron {
+    color: var(--text);
+}
+
+.sim-header--toggle[aria-expanded="false"] .sim-chevron {
+    transform: rotate(-90deg);
+}
+
+.sim-collapsible[hidden] {
+    display: none;
 }
 
 .sim-icon {
