@@ -25,6 +25,8 @@ declare global {
     function pendingSalatAlert(state: any): any;
     function recordPause(pauses: any[] | undefined, start: number | null | undefined, end: number): any[];
     function computeDay(options: { clockIn: string; dayPauses: any[]; activeSecs?: number; ramadan?: boolean }): { departureMins: number; [key: string]: any };
+    function simulatePauseDuration(options: { clockIn: string; dayPauses: any[]; activeSecs?: number; ramadan?: boolean; extraPauseMins: number }): Record<string, any>;
+    function simulateTargetDeparture(options: { clockIn: string; dayPauses: any[]; activeSecs?: number; ramadan?: boolean; targetOutMins: number }): Record<string, any>;
     function applyDayRulesConfig(config?: any): void;
 }
 

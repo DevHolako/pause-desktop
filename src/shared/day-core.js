@@ -80,3 +80,82 @@ function recordPause(dayPauses, startTs, endTs) {
     if (!startTs || list.length >= MAX_PAUSES) return list;
     return [...list, { start: formatMoroccoHM(startTs), end: formatMoroccoHM(endTs) }];
 }
+
+/**
+ * Simule l'ajout d'une durée de pause supplémentaire (en minutes) en tenant compte
+ * des pauses déjà prises (fermées + pause active en cours).
+ */
+function simulatePauseDuration({ clockIn, dayPauses, activeSecs, ramadan, extraPauseMins }) {
+    const rules = dayRules(ramadan);
+    const current = computeDay({ clockIn, dayPauses, activeSecs, ramadan });
+    const extra = Math.max(0, toFiniteNumber(Number(extraPauseMins), 0));
+    const existingPauseMins = current.totalPauseMins;
+    const totalPauseMins = existingPauseMins + extra;
+    const arrivalMins = timeToMins(clockIn);
+
+    const rawDepartureMins = arrivalMins + rules.workMins + totalPauseMins;
+    let departureMins = Math.max(rawDepartureMins, rules.minOut);
+    if (rules.maxOut !== null) departureMins = Math.min(departureMins, rules.maxOut);
+
+    const remainingBreakMins = rules.maxPauseMins - totalPauseMins;
+    const exceedsMaxOutMins = rules.maxOut !== null ? Math.max(0, Math.ceil(rawDepartureMins - rules.maxOut)) : 0;
+    const exceedsBudgetMins = Math.max(0, Math.ceil(totalPauseMins - rules.maxPauseMins));
+    const underMinOutMins = Math.max(0, Math.floor(rules.minOut - rawDepartureMins));
+
+    return {
+        extraPauseMins: extra,
+        existingPauseMins,
+        totalPauseMins,
+        remainingBreakMins,
+        rawDepartureMins: Math.floor(rawDepartureMins),
+        departureMins: Math.floor(departureMins),
+        currentDepartureMins: current.departureMins,
+        exceedsMaxOutMins,
+        exceedsBudgetMins,
+        underMinOutMins
+    };
+}
+
+/**
+ * Calcule le temps de pause supplémentaire disponible pour sortir à une heure cible
+ * (targetOutMins), en tenant compte de l'heure d'arrivée et des pauses déjà effectuées.
+ */
+function simulateTargetDeparture({ clockIn, dayPauses, activeSecs, ramadan, targetOutMins }) {
+    const rules = dayRules(ramadan);
+    const current = computeDay({ clockIn, dayPauses, activeSecs, ramadan });
+    const arrivalMins = timeToMins(clockIn);
+    const existingPauseMins = current.totalPauseMins;
+    const target = toFiniteNumber(Number(targetOutMins), rules.minOut);
+
+    // Heure de sortie théorique non bornée avec les seules pauses existantes
+    const baseDepartureMins = arrivalMins + rules.workMins + existingPauseMins;
+    // Temps de pause additionnel possible avant d'atteindre l'heure cible
+    const availablePauseMins = target - baseDepartureMins;
+    const budgetRemainingMins = current.remainingBreakMins;
+    const effectiveAvailableMins = Math.max(0, Math.min(availablePauseMins, budgetRemainingMins));
+
+    const isTargetBeforeMinOut = target < rules.minOut;
+    const isTargetAfterMaxOut = rules.maxOut !== null && target > rules.maxOut;
+    const isAlreadyPastTarget = availablePauseMins < 0;
+    const overTargetByMins = isAlreadyPastTarget ? Math.ceil(-availablePauseMins) : 0;
+    const exceedsBudgetByMins = availablePauseMins > Math.max(0, budgetRemainingMins)
+        ? Math.floor(availablePauseMins - Math.max(0, budgetRemainingMins))
+        : 0;
+
+    return {
+        targetOutMins: target,
+        existingPauseMins,
+        baseDepartureMins: Math.floor(baseDepartureMins),
+        currentDepartureMins: current.departureMins,
+        availablePauseMins: Math.floor(Math.max(0, availablePauseMins)),
+        rawAvailablePauseMins: availablePauseMins,
+        budgetRemainingMins,
+        effectiveAvailableMins: Math.floor(effectiveAvailableMins),
+        isTargetBeforeMinOut,
+        isTargetAfterMaxOut,
+        isAlreadyPastTarget,
+        overTargetByMins,
+        exceedsBudgetByMins
+    };
+}
+
