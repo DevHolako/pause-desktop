@@ -49,6 +49,23 @@ jobs:
       - name: Build Windows Installer (NSIS)
         run: npm run dist
 
+      - name: Generate Changelog from Commits
+        id: changelog
+        shell: pwsh
+        run: |
+          $tags = @(git tag --sort=-creatordate)
+          $prevTag = if ($tags.Count -ge 2) { $tags[1] } else { "" }
+          if ($prevTag) {
+            $commits = @(git log "$prevTag..HEAD" --pretty=format:"- %s" | Where-Object { $_ -notmatch "^- chore\(release\):" })
+          } else {
+            $commits = @(git log -n 10 --pretty=format:"- %s" | Where-Object { $_ -notmatch "^- chore\(release\):" })
+          }
+          if ($commits.Count -eq 0) {
+            $commits = @("- Améliorations et corrections diverses")
+          }
+          $notes = @("## Nouveautés & corrections", "") + $commits
+          $notes -join "`n" | Set-Content -Path "CHANGELOG_RELEASE.md" -Encoding UTF8
+
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -56,6 +73,7 @@ jobs:
           name: ${{ github.ref_name }}
           draft: ${{ github.event.inputs.draft == 'true' }}
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          body_path: CHANGELOG_RELEASE.md
           generate_release_notes: true
           files: |
             release/*.exe
@@ -63,3 +81,4 @@ jobs:
             release/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -94,14 +94,17 @@
         return container.innerHTML || '<p>Nouvelle mise à jour disponible.</p>';
     }
 
-    /** Décode les entités HTML de base si le flux Atom a été doublement échappé */
+    /** Décode les entités HTML de base (même doublement échappées dans le flux Atom) */
     function decodeHtmlEntitiesIfEscaped(str) {
-        if (!/&lt;\s*\/?\s*(h[1-6]|ul|ol|li|p|div|strong|em|code|tt|a|br)\b/i.test(str)) {
-            return str;
+        let current = str;
+        for (let i = 0; i < 3; i++) {
+            if (!/(&lt;|&#60;|&#x3c;|&amp;lt;)/i.test(current)) break;
+            const txt = document.createElement('textarea');
+            txt.innerHTML = current;
+            if (txt.value === current) break;
+            current = txt.value;
         }
-        const txt = document.createElement('textarea');
-        txt.innerHTML = str;
-        return txt.value;
+        return current;
     }
 
     /** Analyse et convertit les notes de version (HTML d'electron-updater ou Markdown GitHub) en HTML sécurisé */
