@@ -39,47 +39,134 @@
         }
     }
 
-    /** Analyse et convertit du Markdown basique en HTML sécurisé */
-    function renderMarkdown(md) {
-        if (!md) return '<p>Nouvelle mise à jour disponible.</p>';
-        const lines = escapeHtml(md).split('\n');
+    const ALLOWED_TAGS = new Set([
+        'H1', 'H2', 'H3', 'H4', 'P', 'UL', 'OL', 'LI',
+        'STRONG', 'B', 'EM', 'I', 'CODE', 'PRE', 'BR', 'HR', 'BLOCKQUOTE', 'SPAN', 'A'
+    ]);
+    const DROP_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH']);
+
+    /** Nettoie un arbre HTML pour ne conserver que les balises de formatage sûres */
+    function sanitizeHtml(dirtyHtml) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(dirtyHtml, 'text/html');
+
+        function cleanNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return document.createTextNode(node.textContent || '');
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                return null;
+            }
+
+            let tag = node.tagName.toUpperCase();
+            if (DROP_TAGS.has(tag)) return null;
+            if (tag === 'TT') tag = 'CODE';
+            if (tag === 'DIV') tag = 'P';
+
+            const frag = document.createDocumentFragment();
+            for (const child of Array.from(node.childNodes)) {
+                const cleanedChild = cleanNode(child);
+                if (cleanedChild) frag.appendChild(cleanedChild);
+            }
+
+            if (!ALLOWED_TAGS.has(tag)) {
+                return frag;
+            }
+
+            const el = document.createElement(tag.toLowerCase());
+            if (tag === 'A') {
+                const href = (node.getAttribute('href') || '').trim();
+                if (/^https?:\/\//i.test(href)) {
+                    el.setAttribute('href', href);
+                    el.setAttribute('target', '_blank');
+                    el.setAttribute('rel', 'noopener');
+                }
+            }
+            el.appendChild(frag);
+            return el;
+        }
+
+        const container = document.createElement('div');
+        for (const child of Array.from(doc.body.childNodes)) {
+            const cleaned = cleanNode(child);
+            if (cleaned) container.appendChild(cleaned);
+        }
+        return container.innerHTML || '<p>Nouvelle mise à jour disponible.</p>';
+    }
+
+    /** Décode les entités HTML de base si le flux Atom a été doublement échappé */
+    function decodeHtmlEntitiesIfEscaped(str) {
+        if (!/&lt;\s*\/?\s*(h[1-6]|ul|ol|li|p|div|strong|em|code|tt|a|br)\b/i.test(str)) {
+            return str;
+        }
+        const txt = document.createElement('textarea');
+        txt.innerHTML = str;
+        return txt.value;
+    }
+
+    /** Analyse et convertit les notes de version (HTML d'electron-updater ou Markdown GitHub) en HTML sécurisé */
+    function renderMarkdown(raw) {
+        if (!raw || !String(raw).trim()) return '<p>Nouvelle mise à jour disponible.</p>';
+        const normalized = decodeHtmlEntitiesIfEscaped(String(raw).trim());
+
+        // Si le contenu contient déjà des balises HTML (cas d'electron-updater via releases.atom)
+        if (/<(h[1-6]|ul|ol|li|p|div|strong|em|b|i|code|tt|pre|a|br|hr|blockquote)\b/i.test(normalized)) {
+            return sanitizeHtml(normalized);
+        }
+
+        // Sinon conversion Markdown -> HTML
+        const lines = escapeHtml(normalized).split(/\r?\n/);
         let html = '';
-        let inList = false;
+        let listType = null;
+
+        const closeList = () => {
+            if (listType) {
+                html += `</${listType}>`;
+                listType = null;
+            }
+        };
 
         for (let line of lines) {
             line = line.trim();
             if (!line) {
-                if (inList) {
-                    html += '</ul>';
-                    inList = false;
-                }
+                closeList();
                 continue;
             }
 
-            // Titres
-            if (line.startsWith('### ')) {
-                if (inList) { html += '</ul>'; inList = false; }
+            if (line.startsWith('#### ')) {
+                closeList();
+                html += `<h4>${formatInline(line.slice(5))}</h4>`;
+            } else if (line.startsWith('### ')) {
+                closeList();
                 html += `<h3>${formatInline(line.slice(4))}</h3>`;
             } else if (line.startsWith('## ')) {
-                if (inList) { html += '</ul>'; inList = false; }
+                closeList();
                 html += `<h2>${formatInline(line.slice(3))}</h2>`;
             } else if (line.startsWith('# ')) {
-                if (inList) { html += '</ul>'; inList = false; }
+                closeList();
                 html += `<h1>${formatInline(line.slice(2))}</h1>`;
             } else if (line.startsWith('- ') || line.startsWith('* ')) {
-                if (!inList) {
+                if (listType !== 'ul') {
+                    closeList();
                     html += '<ul>';
-                    inList = true;
+                    listType = 'ul';
                 }
                 html += `<li>${formatInline(line.slice(2))}</li>`;
+            } else if (/^\d+\.\s+/.test(line)) {
+                if (listType !== 'ol') {
+                    closeList();
+                    html += '<ol>';
+                    listType = 'ol';
+                }
+                html += `<li>${formatInline(line.replace(/^\d+\.\s+/, ''))}</li>`;
             } else {
-                if (inList) { html += '</ul>'; inList = false; }
+                closeList();
                 html += `<p>${formatInline(line)}</p>`;
             }
         }
 
-        if (inList) html += '</ul>';
-        return html;
+        closeList();
+        return sanitizeHtml(html);
     }
 
     /** Formate gras, italique, code et liens inline */
@@ -88,7 +175,8 @@
             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.+?)\*/g, '<em>$1</em>')
             .replace(/`([^`]+)`/g, '<code>$1</code>')
-            .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+            .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+            .replace(/(^|[\s(])(https?:\/\/[^\s)<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
     }
 
     /** Met à jour le texte et l'état désactivé du bouton principal en préservant son innerHTML */
@@ -187,6 +275,17 @@
         const laterBtn = dialog.querySelector('#updateLaterBtn');
         const actionBtn = dialog.querySelector('#updateActionBtn');
         const fallbackLink = dialog.querySelector('#updateFallbackLink');
+        const notesBody = dialog.querySelector('#updateNotesBody');
+
+        if (notesBody) {
+            notesBody.addEventListener('click', (e) => {
+                const link = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+                if (link && link.href) {
+                    e.preventDefault();
+                    window.psUpdater.openReleaseUrl(link.href);
+                }
+            });
+        }
 
         if (fallbackLink) {
             fallbackLink.addEventListener('click', (e) => {

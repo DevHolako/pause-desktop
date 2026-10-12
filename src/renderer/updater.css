@@ -116,7 +116,8 @@
 
 .update-notes-body h1,
 .update-notes-body h2,
-.update-notes-body h3 {
+.update-notes-body h3,
+.update-notes-body h4 {
     margin: 10px 0 4px 0;
     font-size: 13px;
     font-weight: 700;
@@ -125,11 +126,21 @@
 
 .update-notes-body h1:first-child,
 .update-notes-body h2:first-child,
-.update-notes-body h3:first-child {
+.update-notes-body h3:first-child,
+.update-notes-body h4:first-child {
     margin-top: 0;
 }
 
-.update-notes-body ul {
+.update-notes-body p {
+    margin: 4px 0 6px 0;
+}
+
+.update-notes-body p:last-child {
+    margin-bottom: 0;
+}
+
+.update-notes-body ul,
+.update-notes-body ol {
     margin: 4px 0 8px 18px;
     padding: 0;
 }
