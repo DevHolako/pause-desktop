@@ -124,6 +124,17 @@ if (fullscreenPauseToggle) {
     });
 }
 
+// Calcul de pause selon l'heure de départ souhaitée
+const targetDepartureToggle = document.getElementById('targetDepartureToggle');
+if (targetDepartureToggle) {
+    chrome.storage.local.get('targetDepartureEnabled', (res) => {
+        targetDepartureToggle.checked = Boolean(res.targetDepartureEnabled);
+    });
+    targetDepartureToggle.addEventListener('change', () => {
+        chrome.storage.local.set({ targetDepartureEnabled: targetDepartureToggle.checked }, showSaved);
+    });
+}
+
 // Chargement initial
 chrome.storage.local.get(DAY_RULES_KEY, (res) => fillForm(res[DAY_RULES_KEY]));
 

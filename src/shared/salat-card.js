@@ -61,6 +61,54 @@ var OVERLAY_CSS = `
         color: #fff;
     }
     .countdown[hidden], .arabic[hidden] { display: none; }
+    .target-leave-pause-wrap {
+        margin: 18px 0 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+    }
+    .target-leave-pause-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+    }
+    .pause-target-input {
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 4px 8px;
+        color-scheme: dark;
+        outline: none;
+    }
+    .pause-target-input:focus {
+        border-color: var(--accent);
+    }
+    .target-leave-pause-calc {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--accent);
+    }
+    .pause-target-val {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+    }
+    .pause-target-warn {
+        color: #ff8585;
+        font-weight: 600;
+    }
     .close {
         margin-top: 28px;
         padding: 14px 28px;

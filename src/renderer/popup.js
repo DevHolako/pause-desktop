@@ -42,34 +42,12 @@ const customMinsInput = document.getElementById('customMinsInput');
 const cancelCustomPauseBtn = document.getElementById('cancelCustomPauseBtn');
 const quickPauseFeedback = document.getElementById('quickPauseFeedback');
 const addManualPauseBtn = document.getElementById('addManualPauseBtn');
-const simToggleBtn = document.getElementById('simToggleBtn');
-const simCollapsibleContent = document.getElementById('simCollapsibleContent');
-const simExistingBadge = document.getElementById('simExistingBadge');
-const simTabDuration = document.getElementById('simTabDuration');
-const simTabTarget = document.getElementById('simTabTarget');
-const simPanelDuration = document.getElementById('simPanelDuration');
-const simPanelTarget = document.getElementById('simPanelTarget');
-const simPauseMinsInput = document.getElementById('simPauseMins');
-const simDurationChips = document.querySelectorAll('#simDurationChips .sim-chip[data-sim-mins]');
-const simMinReqBtn = document.getElementById('simMinReqBtn');
-const simMaxAvailBtn = document.getElementById('simMaxAvailBtn');
-const simOutTime = document.getElementById('simOutTime');
-const simResumeNote = document.getElementById('simResumeNote');
-const simRemainingBudget = document.getElementById('simRemainingBudget');
-const simTotalPauseNote = document.getElementById('simTotalPauseNote');
-const simDurationStatus = document.getElementById('simDurationStatus');
-const simTargetTimeInput = document.getElementById('simTargetTime');
-const simPresetMinBtn = document.getElementById('simPresetMinBtn');
-const simPresetMidBtn = document.getElementById('simPresetMidBtn');
-const simPresetMaxBtn = document.getElementById('simPresetMaxBtn');
-const simAvailForTarget = document.getElementById('simAvailForTarget');
-const simAvailSubNote = document.getElementById('simAvailSubNote');
-const simEffectiveAvail = document.getElementById('simEffectiveAvail');
-const simCurrentOutNote = document.getElementById('simCurrentOutNote');
-const simTargetStatus = document.getElementById('simTargetStatus');
-let simActiveTargetPreset = 'mid';
-let simDynamicPreset = null; // 'mandatory' | 'remaining' | null
-let simCollapsed = false;
+const targetLeaveBox = document.getElementById('targetLeaveBox');
+const targetLeaveInput = document.getElementById('targetLeaveInput');
+const clearTargetLeaveBtn = document.getElementById('clearTargetLeaveBtn');
+const targetLeaveHint = document.getElementById('targetLeaveHint');
+let targetDepartureEnabled = false;
+let targetDepartureTime = '';
 
 const reminderPicker = createReminderPicker({
     trigger: document.getElementById('reminderTrigger'),
@@ -81,7 +59,7 @@ const reminderPicker = createReminderPicker({
 const historyStatus = document.getElementById('historyStatus');
 
 // --- INITIALISATION ---
-chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError', 'salatAlertLead', DAY_RULES_KEY, 'fullscreenPause', 'simCollapsed'], async (res) => {
+chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError', 'salatAlertLead', DAY_RULES_KEY, 'fullscreenPause', 'targetDepartureEnabled', 'targetDepartureTime'], async (res) => {
     isRamadanMode = res.isRamadanMode || false;
     applyDayRulesConfig(res[DAY_RULES_KEY]); // règles configurées (ou défauts) avant tout calcul
     salatDay = res.salatDay || null;
@@ -100,8 +78,9 @@ chrome.storage.local.get([...DAY_KEYS, 'isRamadanMode', 'salatDay', 'salatError'
     ramadanToggle.checked = isRamadanMode;
     fullscreenPause = res.fullscreenPause !== false;
     updateFullscreenToggleUI();
-    simCollapsed = Boolean(res.simCollapsed);
-    updateSimCollapseUI();
+    targetDepartureEnabled = Boolean(res.targetDepartureEnabled);
+    targetDepartureTime = res.targetDepartureTime || '';
+    if (targetLeaveInput) targetLeaveInput.value = targetDepartureTime;
     // Pas encore de réglage enregistré → même valeur par défaut que les onglets (10 min)
     reminderPicker.setValue(res.salatAlertLead === undefined ? DEFAULT_ALERT_LEAD_MINS : res.salatAlertLead);
 
@@ -147,6 +126,17 @@ chrome.storage.onChanged.addListener((changes) => {
     if (changes.salatAlertLead) {
         const lead = changes.salatAlertLead.newValue;
         reminderPicker.setValue(lead === undefined ? DEFAULT_ALERT_LEAD_MINS : lead);
+    }
+    if (changes.targetDepartureEnabled !== undefined) {
+        targetDepartureEnabled = Boolean(changes.targetDepartureEnabled.newValue);
+        updateUI();
+    }
+    if (changes.targetDepartureTime !== undefined) {
+        targetDepartureTime = changes.targetDepartureTime.newValue || '';
+        if (targetLeaveInput && document.activeElement !== targetLeaveInput) {
+            targetLeaveInput.value = targetDepartureTime;
+        }
+        updateUI();
     }
 });
 
@@ -360,161 +350,26 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
     chrome.storage.local.remove(DAY_KEYS, () => location.reload());
 });
 
-// --- SIMULATEUR PAUSE & SORTIE ---
+// --- HEURE DE DÉPART SOUHAITÉE ---
 
-function updateSimCollapseUI() {
-    if (simToggleBtn) {
-        simToggleBtn.setAttribute('aria-expanded', String(!simCollapsed));
-    }
-    if (simCollapsibleContent) {
-        simCollapsibleContent.hidden = simCollapsed;
-    }
-}
-
-if (simToggleBtn) {
-    simToggleBtn.addEventListener('click', () => {
-        simCollapsed = !simCollapsed;
-        updateSimCollapseUI();
-        chrome.storage.local.set({ simCollapsed });
+if (targetLeaveInput) {
+    targetLeaveInput.addEventListener('change', () => {
+        const val = targetLeaveInput.value;
+        targetDepartureTime = val;
+        chrome.storage.local.set({ targetDepartureTime: val });
+        updateUI();
     });
-}
-
-function setSimMode(mode) {
-    const isDuration = mode !== 'target';
-    if (simTabDuration && simTabTarget) {
-        simTabDuration.classList.toggle('is-active', isDuration);
-        simTabDuration.setAttribute('aria-selected', String(isDuration));
-        simTabTarget.classList.toggle('is-active', !isDuration);
-        simTabTarget.setAttribute('aria-selected', String(!isDuration));
-    }
-    if (simPanelDuration) simPanelDuration.hidden = !isDuration;
-    if (simPanelTarget) simPanelTarget.hidden = isDuration;
-    updateUI();
-}
-
-if (simTabDuration && simTabTarget) {
-    simTabDuration.addEventListener('click', () => setSimMode('duration'));
-    simTabTarget.addEventListener('click', () => setSimMode('target'));
-}
-
-function updateSimDurationChipSelection(val, dynamicPreset = null) {
-    simDurationChips.forEach((chip) => {
-        const chipMins = parseInt(chip.dataset.simMins, 10);
-        chip.classList.toggle('is-selected', !dynamicPreset && chipMins === val);
-    });
-    if (simMinReqBtn) {
-        simMinReqBtn.classList.toggle('is-selected', dynamicPreset === 'mandatory');
-    }
-    if (simMaxAvailBtn) {
-        simMaxAvailBtn.classList.toggle('is-selected', dynamicPreset === 'remaining');
-    }
-}
-
-if (simPauseMinsInput) {
-    simPauseMinsInput.addEventListener('input', () => {
-        simDynamicPreset = null;
-        const val = parseInt(simPauseMinsInput.value, 10);
-        updateSimDurationChipSelection(val, null);
+    targetLeaveInput.addEventListener('input', () => {
+        targetDepartureTime = targetLeaveInput.value;
         updateUI();
     });
 }
 
-simDurationChips.forEach((chip) => {
-    chip.addEventListener('click', () => {
-        const mins = parseInt(chip.dataset.simMins, 10);
-        if (Number.isFinite(mins)) {
-            simDynamicPreset = null;
-            simPauseMinsInput.value = String(mins);
-            updateSimDurationChipSelection(mins, null);
-            updateUI();
-        }
-    });
-});
-
-if (simMinReqBtn) {
-    simMinReqBtn.addEventListener('click', () => {
-        simDynamicPreset = 'mandatory';
-        const activeSecs = isPaused && pauseStartTime ? Math.floor((Date.now() - pauseStartTime) / 1000) : 0;
-        const day = computeDay({ clockIn: clockInInput.value, dayPauses: pauses, activeSecs, ramadan: isRamadanMode });
-        const remOblig = Math.max(0, Math.floor(day.mandatoryRemainingMins));
-        simPauseMinsInput.value = String(remOblig);
-        updateSimDurationChipSelection(remOblig, 'mandatory');
-        updateUI();
-    });
-}
-
-if (simMaxAvailBtn) {
-    simMaxAvailBtn.addEventListener('click', () => {
-        simDynamicPreset = 'remaining';
-        const activeSecs = isPaused && pauseStartTime ? Math.floor((Date.now() - pauseStartTime) / 1000) : 0;
-        const day = computeDay({ clockIn: clockInInput.value, dayPauses: pauses, activeSecs, ramadan: isRamadanMode });
-        const maxAvail = Math.max(0, Math.floor(day.remainingBreakMins));
-        simPauseMinsInput.value = String(maxAvail);
-        updateSimDurationChipSelection(maxAvail, 'remaining');
-        updateUI();
-    });
-}
-
-function getTargetPresetMins(preset, rules) {
-    const minOut = rules.minOut;
-    const maxOut = rules.maxOut != null ? rules.maxOut : minOut + 60;
-    if (preset === 'min') return minOut;
-    if (preset === 'max') return maxOut;
-    return Math.round((minOut + maxOut) / 2);
-}
-
-function updateSimTargetChipSelection(preset) {
-    [
-        [simPresetMinBtn, 'min'],
-        [simPresetMidBtn, 'mid'],
-        [simPresetMaxBtn, 'max']
-    ].forEach(([btn, key]) => {
-        if (btn) btn.classList.toggle('is-selected', preset === key);
-    });
-}
-
-function syncSimTargetPresets() {
-    const rules = dayRules(isRamadanMode);
-    const minHM = minsToHM(getTargetPresetMins('min', rules));
-    const midHM = minsToHM(getTargetPresetMins('mid', rules));
-    const maxHM = minsToHM(getTargetPresetMins('max', rules));
-    if (simPresetMinBtn) simPresetMinBtn.textContent = `Au plus tôt (${minHM})`;
-    if (simPresetMidBtn) simPresetMidBtn.textContent = `Milieu (${midHM})`;
-    if (simPresetMaxBtn) simPresetMaxBtn.textContent = `Au plus tard (${maxHM})`;
-
-    if (simActiveTargetPreset && simTargetTimeInput) {
-        simTargetTimeInput.value = minsToHM(getTargetPresetMins(simActiveTargetPreset, rules));
-    }
-}
-
-[
-    [simPresetMinBtn, 'min'],
-    [simPresetMidBtn, 'mid'],
-    [simPresetMaxBtn, 'max']
-].forEach(([btn, key]) => {
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-        simActiveTargetPreset = key;
-        const rules = dayRules(isRamadanMode);
-        simTargetTimeInput.value = minsToHM(getTargetPresetMins(key, rules));
-        updateSimTargetChipSelection(key);
-        updateUI();
-    });
-});
-
-if (simTargetTimeInput) {
-    simTargetTimeInput.addEventListener('input', () => {
-        const rules = dayRules(isRamadanMode);
-        const currentMins = timeToMins(simTargetTimeInput.value);
-        let matched = null;
-        for (const key of ['min', 'mid', 'max']) {
-            if (currentMins === getTargetPresetMins(key, rules)) {
-                matched = key;
-                break;
-            }
-        }
-        simActiveTargetPreset = matched;
-        updateSimTargetChipSelection(matched);
+if (clearTargetLeaveBtn) {
+    clearTargetLeaveBtn.addEventListener('click', () => {
+        targetDepartureTime = '';
+        if (targetLeaveInput) targetLeaveInput.value = '';
+        chrome.storage.local.set({ targetDepartureTime: '' });
         updateUI();
     });
 }
@@ -527,7 +382,6 @@ function applyModeStyles() {
     limitBadge.innerText = `Entre ${minsToHM(rules.minOut)} et ${minsToHM(rules.maxOut != null ? rules.maxOut : rules.minOut + 60)}`;
     const minPauseText = rules.minPauseMins > 0 ? `min ${formatDuration(rules.minPauseMins)} · ` : '';
     availLabel.innerText = `Pause dispo (${minPauseText}max ${formatDuration(rules.maxPauseMins)})`;
-    syncSimTargetPresets();
 }
 
 function formatPauseDur(p) {
@@ -615,136 +469,13 @@ function updateSalatBanner() {
         `${pad2(Math.floor(remSecs / 3600))}:${pad2(Math.floor((remSecs % 3600) / 60))}:${pad2(remSecs % 60)}`;
 }
 
-function updateSimulatorUI(activeSecs, day) {
-    if (!simExistingBadge) return;
-    const rules = dayRules(isRamadanMode);
-
-    // Si "Reste oblig." ou "Max dispo" est actif, suivre en direct l'évolution
-    if (simDynamicPreset && simPauseMinsInput && document.activeElement !== simPauseMinsInput) {
-        const dynamicVal = simDynamicPreset === 'mandatory'
-            ? Math.max(0, Math.floor(day.mandatoryRemainingMins))
-            : Math.max(0, Math.floor(day.remainingBreakMins));
-        simPauseMinsInput.value = String(dynamicVal);
-    }
-
-    const extraMins = Math.max(0, parseInt(simPauseMinsInput ? simPauseMinsInput.value : '0', 10) || 0);
-    const durSim = simulatePauseDuration({
-        clockIn: clockInInput.value,
-        dayPauses: pauses,
-        activeSecs,
-        ramadan: isRamadanMode,
-        extraPauseMins: extraMins
-    });
-
-    const minBadgePart = durSim.minPauseMins > 0 ? ` · Min oblig. : ${formatDuration(durSim.minPauseMins)}` : '';
-    simExistingBadge.textContent = `Pris : ${formatDuration(durSim.existingPauseMins)}${isPaused ? ' (en cours)' : ''}${minBadgePart}`;
-
-    // --- Mode 1 : Pause -> Heure de sortie ---
-    if (simOutTime) {
-        simOutTime.textContent = minsToHM(durSim.departureMins);
-        simOutTime.classList.toggle('is-warn', durSim.exceedsMaxOutMins > 0);
-    }
-    if (simResumeNote) {
-        const nowMins = Math.floor(moroccoNowSecs() / 60);
-        simResumeNote.textContent = extraMins > 0
-            ? `Fin de pause si lancée : ${minsToHM(nowMins + extraMins)}`
-            : `Aucune pause simulée`;
-    }
-    if (simRemainingBudget) {
-        if (durSim.remainingBreakMins >= 0) {
-            simRemainingBudget.textContent = formatDuration(durSim.remainingBreakMins);
-            simRemainingBudget.classList.remove('is-warn');
-        } else {
-            simRemainingBudget.textContent = `-${formatDuration(Math.abs(durSim.remainingBreakMins))}`;
-            simRemainingBudget.classList.add('is-warn');
-        }
-    }
-    if (simTotalPauseNote) {
-        const effDiffers = durSim.effectivePauseMins > durSim.totalPauseMins;
-        simTotalPauseNote.textContent = effDiffers
-            ? `Cumul : ${formatDuration(durSim.totalPauseMins)} (compté : ${formatDuration(durSim.effectivePauseMins)} min oblig.)`
-            : `Cumul : ${formatDuration(durSim.totalPauseMins)} (${formatDuration(durSim.existingPauseMins)} + ${formatDuration(extraMins)})`;
-    }
-    if (simDurationStatus) {
-        if (durSim.exceedsMaxOutMins > 0) {
-            simDurationStatus.classList.add('is-warn');
-            simDurationStatus.textContent = `⚠️ Dépasse la sortie max (${minsToHM(rules.maxOut)}) de ${formatDuration(durSim.exceedsMaxOutMins)} — sortie théorique à ${minsToHM(durSim.rawDepartureMins)}.`;
-        } else if (durSim.exceedsBudgetMins > 0) {
-            simDurationStatus.classList.add('is-warn');
-            simDurationStatus.textContent = `⚠️ Dépasse le forfait pause (${formatDuration(rules.maxPauseMins)}) de ${formatDuration(durSim.exceedsBudgetMins)} — sortie à ${minsToHM(durSim.departureMins)}.`;
-        } else if (durSim.mandatoryRemainingAfterMins > 0) {
-            simDurationStatus.classList.remove('is-warn');
-            simDurationStatus.textContent = `✓ Sortie à ${minsToHM(durSim.departureMins)} (pause min obligatoire de ${formatDuration(durSim.minPauseMins)} appliquée d'office ; il reste ${formatDuration(durSim.mandatoryRemainingAfterMins)} de pause obligatoire sans décaler la sortie).`;
-        } else {
-            simDurationStatus.classList.remove('is-warn');
-            const shiftMins = durSim.departureMins - durSim.currentDepartureMins;
-            const absorbedNote = durSim.absorbedByMinPauseMins > 0
-                ? ` dont ${formatDuration(durSim.absorbedByMinPauseMins)} incluses dans la pause obligatoire`
-                : '';
-            simDurationStatus.textContent = shiftMins > 0
-                ? `✓ Avec +${formatDuration(extraMins)}${absorbedNote}, sortie à ${minsToHM(durSim.departureMins)} (+${formatDuration(shiftMins)} par rapport à ${minsToHM(durSim.currentDepartureMins)}).`
-                : `✓ Avec +${formatDuration(extraMins)}${absorbedNote}, votre sortie reste à ${minsToHM(durSim.departureMins)}.`;
-        }
-    }
-
-    // --- Mode 2 : Sortie cible -> Pause disponible ---
-    const parsedTarget = simTargetTimeInput ? timeToMins(simTargetTimeInput.value) : NaN;
-    const targetMins = Number.isNaN(parsedTarget) ? rules.minOut : parsedTarget;
-    const targetSim = simulateTargetDeparture({
-        clockIn: clockInInput.value,
-        dayPauses: pauses,
-        activeSecs,
-        ramadan: isRamadanMode,
-        targetOutMins: targetMins
-    });
-
-    if (simAvailForTarget) {
-        simAvailForTarget.textContent = formatDuration(targetSim.availablePauseMins);
-        simAvailForTarget.classList.toggle('is-warn', targetSim.isAlreadyPastTarget);
-    }
-    if (simAvailSubNote) {
-        simAvailSubNote.textContent = targetSim.mandatoryRemainingMins > 0
-            ? `Pris : ${formatDuration(targetSim.existingPauseMins)} · Dont ${formatDuration(targetSim.mandatoryRemainingMins)} oblig.`
-            : `Après déduction de ${formatDuration(targetSim.existingPauseMins)} pris`;
-    }
-    if (simEffectiveAvail) {
-        simEffectiveAvail.textContent = formatDuration(targetSim.effectiveAvailableMins);
-        simEffectiveAvail.classList.toggle('is-warn', targetSim.isAlreadyPastTarget || targetSim.budgetRemainingMins < 0);
-    }
-    if (simCurrentOutNote) {
-        simCurrentOutNote.textContent = `Sortie actuelle : ${minsToHM(targetSim.currentDepartureMins)}`;
-    }
-    if (simTargetStatus) {
-        if (targetSim.isBlockedByMinPause) {
-            simTargetStatus.classList.add('is-warn');
-            simTargetStatus.textContent = `⚠️ Impossible : avec la pause min obligatoire (${formatDuration(targetSim.minPauseMins)}), la sortie au plus tôt est à ${minsToHM(targetSim.baseDepartureMins)} (+${formatDuration(targetSim.overTargetByMins)}).`;
-        } else if (targetSim.isAlreadyPastTarget) {
-            simTargetStatus.classList.add('is-warn');
-            simTargetStatus.textContent = `⚠️ Objectif dépassé de ${formatDuration(targetSim.overTargetByMins)} : avec vos ${formatDuration(targetSim.existingPauseMins)} de pause, la sortie est déjà à ${minsToHM(targetSim.baseDepartureMins)}.`;
-        } else if (targetSim.isTargetBeforeMinOut) {
-            simTargetStatus.classList.add('is-warn');
-            simTargetStatus.textContent = `⚠️ Heure visée avant la sortie min du règlement (${minsToHM(rules.minOut)}). Pause possible d'ici ${minsToHM(targetSim.targetOutMins)} : ${formatDuration(targetSim.availablePauseMins)}.`;
-        } else if (targetSim.isTargetAfterMaxOut) {
-            simTargetStatus.classList.add('is-warn');
-            simTargetStatus.textContent = `⚠️ Heure visée après la sortie max (${minsToHM(rules.maxOut)}). Forfait pause restant : ${formatDuration(Math.max(0, targetSim.budgetRemainingMins))}.`;
-        } else if (targetSim.exceedsBudgetByMins > 0) {
-            simTargetStatus.classList.remove('is-warn');
-            simTargetStatus.textContent = `✓ Il vous reste ${formatDuration(targetSim.availablePauseMins)} avant ${minsToHM(targetSim.targetOutMins)} (dont ${formatDuration(targetSim.effectiveAvailableMins)} dans le forfait max de ${formatDuration(rules.maxPauseMins)}).`;
-        } else {
-            simTargetStatus.classList.remove('is-warn');
-            const obligPart = targetSim.mandatoryRemainingMins > 0
-                ? ` (dont ${formatDuration(Math.min(targetSim.availablePauseMins, targetSim.mandatoryRemainingMins))} obligatoires déjà comptées)`
-                : '';
-            simTargetStatus.textContent = `✓ Pour sortir à ${minsToHM(targetSim.targetOutMins)}, il vous reste ${formatDuration(targetSim.availablePauseMins)} de pause${obligPart}.`;
-        }
-    }
-}
-
 function updateUI() {
     updateSalatBanner();
 
     const activeSecs = isPaused && pauseStartTime ? Math.floor((Date.now() - pauseStartTime) / 1000) : 0;
     const day = computeDay({ clockIn: clockInInput.value, dayPauses: pauses, activeSecs, ramadan: isRamadanMode });
+    const rules = dayRules(isRamadanMode);
+    const minPauseText = rules.minPauseMins > 0 ? `min ${formatDuration(rules.minPauseMins)} · ` : '';
 
     // Pause en cours
     timerRow.classList.toggle('is-running', isPaused);
@@ -755,10 +486,53 @@ function updateUI() {
 
     totalPauseDisplay.innerText = `Total: ${formatDuration(day.totalPauseMins)}`;
 
-    // Capital pause
-    const isBreakEmpty = day.remainingBreakMins < 0;
-    availableBreakDisplay.innerText = formatDuration(isBreakEmpty ? 0 : day.remainingBreakMins);
-    availableBreakDisplay.classList.toggle('is-empty', isBreakEmpty);
+    // Capital pause / Calcul selon l'heure de départ souhaitée
+    if (targetDepartureEnabled) {
+        if (targetLeaveBox) targetLeaveBox.hidden = false;
+        const targetMins = timeToMins(targetDepartureTime);
+        if (!Number.isNaN(targetMins)) {
+            const targetSim = simulateTargetDeparture({
+                clockIn: clockInInput.value || DEFAULT_CLOCK_IN,
+                dayPauses: pauses,
+                activeSecs,
+                ramadan: isRamadanMode,
+                targetOutMins: targetMins
+            });
+
+            availLabel.innerText = `Pause dispo (départ ${targetDepartureTime})`;
+            const isWarn = targetSim.isAlreadyPastTarget || targetSim.availablePauseMins <= 0;
+            availableBreakDisplay.innerText = formatDuration(Math.max(0, targetSim.availablePauseMins));
+            availableBreakDisplay.classList.toggle('is-empty', isWarn);
+
+            if (targetLeaveHint) {
+                if (targetSim.isBlockedByMinPause || targetSim.isAlreadyPastTarget) {
+                    targetLeaveHint.className = 'target-leave-hint is-warn';
+                    targetLeaveHint.innerText = `⚠️ Sortie min : ${minsToHM(targetSim.baseDepartureMins)} (+${formatDuration(targetSim.overTargetByMins)})`;
+                } else if (targetSim.exceedsBudgetByMins > 0) {
+                    targetLeaveHint.className = 'target-leave-hint is-warn';
+                    targetLeaveHint.innerText = `⚠️ Dépasse forfait (+${formatDuration(targetSim.exceedsBudgetByMins)})`;
+                } else {
+                    targetLeaveHint.className = 'target-leave-hint is-good';
+                    targetLeaveHint.innerText = `Pour partir à ${targetDepartureTime}`;
+                }
+            }
+        } else {
+            availLabel.innerText = `Pause dispo (${minPauseText}max ${formatDuration(rules.maxPauseMins)})`;
+            const isBreakEmpty = day.remainingBreakMins < 0;
+            availableBreakDisplay.innerText = formatDuration(isBreakEmpty ? 0 : day.remainingBreakMins);
+            availableBreakDisplay.classList.toggle('is-empty', isBreakEmpty);
+            if (targetLeaveHint) {
+                targetLeaveHint.className = 'target-leave-hint';
+                targetLeaveHint.innerText = "Indiquez l'heure de départ";
+            }
+        }
+    } else {
+        if (targetLeaveBox) targetLeaveBox.hidden = true;
+        availLabel.innerText = `Pause dispo (${minPauseText}max ${formatDuration(rules.maxPauseMins)})`;
+        const isBreakEmpty = day.remainingBreakMins < 0;
+        availableBreakDisplay.innerText = formatDuration(isBreakEmpty ? 0 : day.remainingBreakMins);
+        availableBreakDisplay.classList.toggle('is-empty', isBreakEmpty);
+    }
 
     // Sortie réelle + compte à rebours (heure du Maroc)
     clockOutDisplay.innerText = minsToHM(day.departureMins);
@@ -773,8 +547,6 @@ function updateUI() {
     if (customPauseBtn) customPauseBtn.disabled = isPaused;
     if (addManualPauseBtn) addManualPauseBtn.disabled = isPaused;
     if (isPaused && customPauseForm && !customPauseForm.hidden) customPauseForm.hidden = true;
-
-    updateSimulatorUI(activeSecs, day);
 }
 
 // --- HISTORIQUE (SQLite, via le service worker) ---

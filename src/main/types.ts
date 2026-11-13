@@ -61,7 +61,8 @@ export interface StoreValues {
     syncConfig?: SyncConfig;
     syncConfigUpdatedAt?: number;
     fullscreenPause?: boolean;
-    simCollapsed?: boolean;
+    targetDepartureEnabled?: boolean;
+    targetDepartureTime?: string;
     [key: string]: any;
 }
 
